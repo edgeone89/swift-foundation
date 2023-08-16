@@ -97,7 +97,59 @@ extension Date.FormatStyle {
         var secondFraction: Symbol.SymbolType.SecondFractionOption?
         var timeZoneSymbol: Symbol.SymbolType.TimeZoneSymbolOption?
 
-        var formatterTemplate : String {
+        // Swap regular hour for conversational-style hour option if needed
+        func preferredHour(withLocale locale: Locale?) -> Symbol.SymbolType.HourOption? {
+            guard let hour, let locale else {
+                return nil
+            }
+
+            var showingDayPeriod: Bool
+            switch locale.hourCycle {
+            case .zeroToEleven:
+                showingDayPeriod = true
+            case .oneToTwelve:
+                showingDayPeriod = true
+            case .zeroToTwentyThree:
+                showingDayPeriod = false
+            case .oneToTwentyFour:
+                showingDayPeriod = false
+            }
+
+            // default options (template "J" or "j") may display the hour as
+            // 12-hour and 24-hour depending on regional preferences, while
+            // conversational options (template "C") always shows 12-hour.
+            // Only proceed to override J/j with C if displaying 12-hour.
+            guard showingDayPeriod else {
+                return hour
+            }
+
+            var preferredHour: Symbol.SymbolType.HourOption?
+
+            if locale.language.languageCode == .chinese && locale.region == .taiwan {
+                switch hour {
+                case .defaultDigitsWithAbbreviatedAMPM:
+                    preferredHour = .conversationalDefaultDigitsWithAbbreviatedAMPM
+                case .twoDigitsWithAbbreviatedAMPM:
+                    preferredHour = .conversationalTwoDigitsWithAbbreviatedAMPM
+                case .defaultDigitsWithWideAMPM:
+                    preferredHour = .conversationalDefaultDigitsWithWideAMPM
+                case .twoDigitsWithWideAMPM:
+                    preferredHour = .conversationalTwoDigitsWithWideAMPM
+                case .defaultDigitsWithNarrowAMPM:
+                    preferredHour = .conversationalDefaultDigitsWithNarrowAMPM
+                case .twoDigitsWithNarrowAMPM:
+                    preferredHour = .conversationalTwoDigitsWithNarrowAMPM
+                case .defaultDigitsNoAMPM, .twoDigitsNoAMPM, .conversationalDefaultDigitsWithAbbreviatedAMPM, .conversationalTwoDigitsWithAbbreviatedAMPM, .conversationalDefaultDigitsWithWideAMPM, .conversationalTwoDigitsWithWideAMPM, .conversationalDefaultDigitsWithNarrowAMPM, .conversationalTwoDigitsWithNarrowAMPM:
+                    preferredHour = hour
+                }
+            } else {
+                preferredHour = hour
+            }
+
+            return preferredHour
+        }
+
+        func formatterTemplate(overridingDayPeriodWithLocale locale: Locale?) -> String {
             var ret = ""
             ret.append(era?.rawValue ?? "")
             ret.append(year?.rawValue ?? "")
@@ -108,12 +160,18 @@ extension Date.FormatStyle {
             ret.append(dayOfYear?.rawValue ?? "")
             ret.append(weekday?.rawValue ?? "")
             ret.append(dayPeriod?.rawValue ?? "")
-            ret.append(hour?.rawValue ?? "")
+            let preferredHour = preferredHour(withLocale: locale)
+            ret.append(preferredHour?.rawValue ?? "")
             ret.append(minute?.rawValue ?? "")
             ret.append(second?.rawValue ?? "")
             ret.append(secondFraction?.rawValue ?? "")
             ret.append(timeZoneSymbol?.rawValue ?? "")
             return ret
+        }
+
+        // Only contains fields greater or equal than `day`, excluding time parts.
+        var dateFields: Self {
+            DateFieldCollection(era: era, year: year, quarter: quarter, month: month, week: week, day: day, dayOfYear: dayOfYear, weekday: weekday, dayPeriod: dayPeriod)
         }
 
         mutating func add(_ rhs: Self) {
@@ -208,6 +266,8 @@ extension Date {
             }
         }
 
+        var _dateStyle: DateStyle? // For accessing locale pref's custom date format
+
         /// The locale to use when formatting date and time values.
         public var locale: Locale
 
@@ -235,13 +295,15 @@ extension Date {
         ///   - calendar: The calendar to use for date values.
         ///   - timeZone: The time zone with which to specify date and time values.
         ///   - capitalizationContext: The capitalization formatting context used when formatting date and time values.
-        /// - Note: Always specify the date length, time length, or the date components to be included in the formatted string with the symbol modifiers. Otherwise, an empty string will be returned when you use the instance to format a `Date`.
+        /// - Note: Always specify the date style, time style, or the date components to be included in the formatted string with the symbol modifiers. Otherwise, an empty string will be returned when you use the instance to format a `Date`.
         public init(date: DateStyle? = nil, time: TimeStyle? = nil, locale: Locale = .autoupdatingCurrent, calendar: Calendar = .autoupdatingCurrent, timeZone: TimeZone = .autoupdatingCurrent, capitalizationContext: FormatStyleCapitalizationContext = .unknown) {
-            if let dateLength = date {
-                _symbols = _symbols.collection(date: dateLength)
+            if let dateStyle = date {
+                _dateStyle = dateStyle
+                _symbols = _symbols.collection(date: dateStyle)
             }
-            if let timeLength = time {
-                _symbols = _symbols.collection(time: timeLength)
+
+            if let timeStyle = time {
+                _symbols = _symbols.collection(time: timeStyle)
             }
 
             self.locale = locale
@@ -250,8 +312,9 @@ extension Date {
             self.capitalizationContext = capitalizationContext
         }
 
-        private init(symbols: DateFieldCollection, locale: Locale, timeZone: TimeZone, calendar: Calendar, capitalizationContext: FormatStyleCapitalizationContext) {
+        private init(symbols: DateFieldCollection, dateStyle: DateStyle?, locale: Locale, timeZone: TimeZone, calendar: Calendar, capitalizationContext: FormatStyleCapitalizationContext) {
             self._symbols = symbols
+            self._dateStyle = dateStyle
             self.locale = locale
             self.timeZone = timeZone
             self.calendar = calendar
@@ -448,6 +511,7 @@ extension Date.FormatStyle : Codable, Hashable {
         case timeZone
         case calendar
         case capitalizationContext
+        case dateStyle
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -457,6 +521,7 @@ extension Date.FormatStyle : Codable, Hashable {
         try container.encode(self.timeZone, forKey: .timeZone)
         try container.encode(self.calendar, forKey: .calendar)
         try container.encode(self.capitalizationContext, forKey: .capitalizationContext)
+        try container.encodeIfPresent(self._dateStyle, forKey: .dateStyle)
     }
 
     public init(from decoder: Decoder) throws {
@@ -466,7 +531,8 @@ extension Date.FormatStyle : Codable, Hashable {
         let timeZone = try container.decode(TimeZone.self, forKey: .timeZone)
         let calendar = try container.decode(Calendar.self, forKey: .calendar)
         let context = try container.decode(FormatStyleCapitalizationContext.self, forKey: .capitalizationContext)
-        self.init(symbols: symbols, locale: locale, timeZone: timeZone, calendar: calendar, capitalizationContext: context)
+        let dateStyle = try container.decodeIfPresent(DateStyle.self, forKey: .dateStyle)
+        self.init(symbols: symbols, dateStyle: dateStyle, locale: locale, timeZone: timeZone, calendar: calendar, capitalizationContext: context)
     }
 }
 

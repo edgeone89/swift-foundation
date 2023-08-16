@@ -99,7 +99,7 @@ extension Locale {
                 return
             }
             var status = U_ZERO_ERROR
-            #if canImport(Glibc)
+            #if canImport(Glibc) || canImport(ucrt)
             // Glibc doesn't support strlcpy
             strcpy(buf, identifier)
             #else
@@ -280,7 +280,8 @@ extension Locale {
             if let id = firstDayOfWeek?.rawValue { keywords[Weekday.legacyKeywordKey] = id }
             if let id = hourCycle?.rawValue { keywords[HourCycle.legacyKeywordKey] = id }
             if let id = measurementSystem?._normalizedIdentifier { keywords[MeasurementSystem.legacyKeywordKey] = id }
-            if let region = region {
+            // No need for redundant region keyword
+            if let region = region, region != languageComponents.region {
                 // rg keyword value is actually a subdivision code
                 keywords[Region.legacyKeywordKey] = Subdivision.subdivision(for: region)._normalizedIdentifier
             }
@@ -298,14 +299,10 @@ extension Locale {
         }
 
         private mutating func applyPreferencesOverride(_ locale: Locale) {
-            if hourCycle == nil {
-                if locale.force24Hour {
-                    // Respect 24-hour override if both force24hour and force12hour are true
-                    hourCycle = .zeroToTwentyThree
-                } else if locale.force12Hour {
-                    hourCycle = .oneToTwelve
-                }
+            if hourCycle == nil, let hc = locale.forceHourCycle {
+                hourCycle = hc
             }
+            
             if measurementSystem == nil, let ms = locale.forceMeasurementSystem {
                 measurementSystem = ms
             }
@@ -317,10 +314,37 @@ extension Locale {
     }
 }
 
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.LanguageCode : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.Script : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.Region : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.Currency : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.Collation : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.NumberingSystem : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.Subdivision : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.Variant : CustomDebugStringConvertible { }
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Locale.MeasurementSystem : CustomDebugStringConvertible { }
+
 extension Locale {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct LanguageCode : Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct LanguageCode : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -335,6 +359,7 @@ extension Locale {
         internal var _identifier: String
         internal var _normalizedIdentifier: String
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -459,7 +484,7 @@ extension Locale {
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Script : Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct Script : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
         public init(stringLiteral value: String) {
             self.init(value)
         }
@@ -474,6 +499,7 @@ extension Locale {
             }
         }
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -532,7 +558,7 @@ extension Locale {
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Region : Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct Region : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         internal static let cldrKeywordKey = ICUCLDRKey("rg")
         internal static let legacyKeywordKey = ICULegacyKey("rg")
@@ -544,6 +570,7 @@ extension Locale {
         internal var _identifier: String
         internal var _normalizedIdentifier: String
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -603,7 +630,7 @@ extension Locale {
                 return nil
             }
 
-            guard let code = String(utf8String: uregion_getRegionCode(containingRegion)) else {
+            guard let code = String(validatingUTF8: uregion_getRegionCode(containingRegion)) else {
                 return nil
             }
 
@@ -623,7 +650,7 @@ extension Locale {
                 return nil
             }
 
-            guard let code = String(utf8String: uregion_getRegionCode(containingContinent)) else {
+            guard let code = String(validatingUTF8: uregion_getRegionCode(containingContinent)) else {
                 return nil
             }
 
@@ -696,7 +723,7 @@ extension Locale {
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Collation : Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct Collation : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         internal static let cldrKeywordKey = ICUCLDRKey("co")
         internal static let legacyKeywordKey = ICULegacyKey("collation")
@@ -717,6 +744,7 @@ extension Locale {
             }
         }
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -788,7 +816,7 @@ extension Locale {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// The complete list of currency codes can be found [here](https://github.com/unicode-org/cldr/blob/latest/common/bcp47/currency.xml), under the key with the name "cu"
-    public struct Currency : Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct Currency : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         fileprivate static let cldrKeywordKey = ICUCLDRKey("cu")
         fileprivate static let legacyKeywordKey = ICULegacyKey("currency")
@@ -810,6 +838,7 @@ extension Locale {
             }
         }
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -829,7 +858,7 @@ extension Locale {
         /// Returns a list of `Locale` currency codes defined in ISO-4217
         public static var isoCurrencies: [Currency] {
             var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UCURR_ALL.rawValue, &status)
+            let values = ucurr_openISOCurrencies(UInt32(UCURR_ALL.rawValue), &status)
             guard status.isSuccess, let values else { return [] }
             let e = ICU.Enumerator(enumerator: values)
             return e.elements.map { Currency($0) }
@@ -838,7 +867,7 @@ extension Locale {
         /// For `Locale.commonISOCurrencyCodes`
         internal static var commonISOCurrencies: [String] {
             var status = U_ZERO_ERROR
-            let values = ucurr_openISOCurrencies(UCURR_COMMON.rawValue | UCURR_NON_DEPRECATED.rawValue, &status)
+            let values = ucurr_openISOCurrencies(UInt32(UCURR_COMMON.rawValue | UCURR_NON_DEPRECATED.rawValue), &status)
             guard status.isSuccess, let values else { return [] }
             let e = ICU.Enumerator(enumerator: values)
             return e.elements.map { $0 }
@@ -878,7 +907,7 @@ extension Locale {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// Defines representations for numeric values. Also known as numeral system
-    public struct NumberingSystem : Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct NumberingSystem : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         internal static let cldrKeywordKey = ICUCLDRKey("nu")
         internal static let legacyKeywordKey = ICULegacyKey("numbers")
@@ -921,6 +950,7 @@ extension Locale {
             }
         }
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1088,7 +1118,7 @@ extension Locale {
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct MeasurementSystem: Codable, Hashable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct MeasurementSystem: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
 
         internal static let cldrKeywordKey = ICUCLDRKey("ms")
         internal static let legacyKeywordKey = ICULegacyKey("measure")
@@ -1110,6 +1140,7 @@ extension Locale {
             }
         }
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1178,7 +1209,7 @@ extension Locale {
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
     /// A subdivision of a country or region, such as a state in the United States, or a province in Canada.
-    public struct Subdivision : Hashable, Codable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct Subdivision : Hashable, Codable, Sendable, ExpressibleByStringLiteral {
 
         internal static let cldrKeywordKey = ICUCLDRKey("sd")
         internal static let legacyKeywordKey = ICULegacyKey("sd")
@@ -1200,6 +1231,7 @@ extension Locale {
             }
         }
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }
@@ -1249,7 +1281,7 @@ extension Locale {
     }
 
     @available(macOS 13, iOS 16, tvOS 16, watchOS 9, *)
-    public struct Variant: Codable, Hashable, Sendable, ExpressibleByStringLiteral, CustomDebugStringConvertible {
+    public struct Variant: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
 
         internal static let cldrKeywordKey = ICUCLDRKey("va")
         internal static let legacyKeywordKey = ICULegacyKey("va")
@@ -1271,6 +1303,7 @@ extension Locale {
             }
         }
 
+        @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
         public var debugDescription: String {
             _normalizedIdentifier
         }

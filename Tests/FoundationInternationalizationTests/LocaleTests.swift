@@ -31,6 +31,14 @@ import TestSupport
 #endif
 
 final class LocaleTests : XCTestCase {
+    
+#if FOUNDATION_FRAMEWORK
+    func test_xcode_override_french() {
+        let task = AuxRunner.launchedTaskRunningClientNamed("TestLocaleAppleLanguagesOverride", withArguments: ["-AppleLanguages", "(fr)"], environment: [:], standardOutput: nil, standardError: nil, options: .init(0))
+        task?.waitUntilExit()
+        XCTAssertEqual(task?.terminationStatus(), 0)
+    }
+#endif
 
     func test_equality() {
         let autoupdating = Locale.autoupdatingCurrent
@@ -244,6 +252,122 @@ final class LocaleTests : XCTestCase {
         for (idx, type) in types.enumerated() {
             XCTAssertEqual(loc.identifier(type), expected[idx], "type: \(type)", file: file, line: line)
         }
+    }
+    
+    func comps(language: String? = nil, script: String? = nil, country: String? = nil, variant: String? = nil) -> [String: String] {
+        var result: [String: String] = [:]
+        if let language { result["kCFLocaleLanguageCodeKey"] = language }
+        if let script { result["kCFLocaleScriptCodeKey"] = script }
+        if let country { result["kCFLocaleCountryCodeKey"] = country }
+        if let variant { result["kCFLocaleVariantCodeKey"] = variant }
+        return result
+    }
+
+    func test_identifierFromComponents() {
+        var c: [String: String] = [:]
+        
+        c = comps(language: "zh", script: "Hans", country: "TW")
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW")
+        
+        // Set some keywords
+        c["CuRrEnCy"] = "qqq"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@currency=qqq")
+
+        // Set some more keywords, check order
+        c["d"] = "d"
+        c["0"] = "0"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        
+        // Add some non-ASCII keywords
+        c["ê"] = "ê"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        
+        // And some non-ASCII values
+        c["n"] = "ñ"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d")
+        
+        // And some values with other letters
+        c["z"] = "Ab09_-+/"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+
+        // And some really short keys
+        c[""] = "hi"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+
+        // And some really short values
+        c["q"] = ""
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;currency=qqq;d=d;z=Ab09_-+/")
+        
+        // All the valid stuff
+        c["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/"
+        XCTAssertEqual(Locale.identifier(fromComponents: c), "zh_Hans_TW@0=0;abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz0123456789=abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-+/;currency=qqq;d=d;z=Ab09_-+/")
+        
+        // POSIX
+        let p = comps(language: "en", script: nil, country: "US", variant: "POSIX")
+        XCTAssertEqual(Locale.identifier(fromComponents: p), "en_US_POSIX")
+        
+        // Odd combos
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en", variant: "POSIX")), "en__POSIX")
+
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(variant: "POSIX")), "__POSIX")
+
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en", script: "Hans", country: "US", variant: "POSIX")), "en_Hans_US_POSIX")
+
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(language: "en")), "en")
+        XCTAssertEqual(Locale.identifier(fromComponents: comps(country: "US", variant: "POSIX")), "_US_POSIX")
+    }
+    
+    #if FOUNDATION_FRAMEWORK
+    func test_identifierFromAnyComponents() {
+        // This internal Foundation-specific version allows for a Calendar entry
+        let comps = comps(language: "zh", script: "Hans", country: "TW")
+        XCTAssertEqual(Locale.identifier(fromComponents: comps), "zh_Hans_TW")
+
+        var anyComps : [String : Any] = [:]
+        anyComps.merge(comps) { a, b in a }
+        
+        anyComps["kCFLocaleCalendarKey"] = Calendar(identifier: .gregorian)
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian")
+
+        // Verify what happens if we have the key in here under two different (but equivalent) names
+        anyComps["calendar"] = "buddhist"
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian")
+
+        anyComps["currency"] = "xyz"
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@calendar=gregorian;currency=xyz")
+        
+        anyComps["AaA"] = "bBb"
+        XCTAssertEqual(Locale.identifier(fromAnyComponents: anyComps), "zh_Hans_TW@aaa=bBb;calendar=gregorian;currency=xyz")
+    }
+    #endif
+
+    func test_identifierCapturingPreferences() {
+        func expectIdentifier(_ localeIdentifier: String, preferences: LocalePreferences, expectedFullIdentifier: String, file: StaticString = #file, line: UInt = #line) {
+            let locale = Locale.localeAsIfCurrent(name: localeIdentifier, overrides: preferences)
+            XCTAssertEqual(locale.identifier, localeIdentifier, file: file, line: line)
+            XCTAssertEqual(locale.identifierCapturingPreferences, expectedFullIdentifier, file: file, line: line)
+        }
+
+        expectIdentifier("en_US", preferences: .init(metricUnits: true, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=metric")
+        expectIdentifier("en_US", preferences: .init(metricUnits: true, measurementUnits: .inches), expectedFullIdentifier: "en_US@measure=uksystem")
+        expectIdentifier("en_US", preferences: .init(metricUnits: false, measurementUnits: .inches), expectedFullIdentifier: "en_US@measure=ussystem")
+        // We treat it as US system as long as `metricUnits` is false
+        expectIdentifier("en_US", preferences: .init(metricUnits: false, measurementUnits: .centimeters), expectedFullIdentifier: "en_US@measure=ussystem")
+
+        // 112778892: Country pref is intentionally ignored
+        expectIdentifier("en_US", preferences: .init(country: "GB"), expectedFullIdentifier: "en_US")
+        expectIdentifier("en_US", preferences: .init(country: "US"), expectedFullIdentifier: "en_US")
+
+        expectIdentifier("en_US", preferences: .init(firstWeekday: [.gregorian : 3]), expectedFullIdentifier: "en_US@fw=tue")
+        // en_US locale doesn't use islamic calendar; preference is ignored
+        expectIdentifier("en_US", preferences: .init(firstWeekday: [.islamic : 3]), expectedFullIdentifier: "en_US")
+
+        expectIdentifier("en_US", preferences: .init(force24Hour: true), expectedFullIdentifier: "en_US@hours=h23")
+        expectIdentifier("en_US", preferences: .init(force12Hour: true), expectedFullIdentifier: "en_US@hours=h12")
+
+        // Preferences not representable by locale identifier are ignored
+        expectIdentifier("en_US", preferences: .init(minDaysInFirstWeek: [.gregorian: 7]), expectedFullIdentifier: "en_US")
+        expectIdentifier("en_US", preferences: .init(dateFormats: [.abbreviated: "custom style"]), expectedFullIdentifier: "en_US")
     }
 }
 
@@ -656,6 +780,14 @@ extension LocaleTests {
 
         // Starting an ID with script code is an acceptable special case
         verify("Hant", cldr: "hant", bcp47: "hant", icu: "hant")
+    }
+
+    func test_asIfCurrentWithBundleLocalizations() {
+        let currentLanguage = Locale.current.language.languageCode!
+        var localizations = Set([ "zh", "fr", "en" ])
+        localizations.insert(currentLanguage.identifier) // We're not sure what the current locale is when test runs. Ensure that it's always in the list of available localizations
+        let fakeCurrent = Locale.localeAsIfCurrentWithBundleLocalizations(Array(localizations), allowsMixedLocalizations: false)
+        XCTAssertEqual(fakeCurrent?.language.languageCode, currentLanguage)
     }
 }
 

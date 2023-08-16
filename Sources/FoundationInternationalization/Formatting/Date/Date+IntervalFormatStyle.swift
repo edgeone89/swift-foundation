@@ -54,29 +54,13 @@ extension Date {
 
         public func format(_ v: Range<Date>) -> String {
             let formatter = Self.cache.formatter(for: self) {
-                let option: ICUPatternGenerator.HourCycleOption?
-                if locale.force24Hour {
-                    option = .force24Hour
-                } else if locale.force12Hour {
-                    option = .force12Hour
-                } else {
-                    option = nil
-                }
+                var template = symbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
 
-                var template: String
-                if let option {
-                    let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: locale.identifier, calendarIdentifier: calendar.identifier, skeleton: symbols.formatterTemplate, hourCycleOption: option)
-                    template = pattern
-                } else {
-                    template = symbols.formatterTemplate
-                }
-
-                // If at this point template is empty, use a default style
                 if template.isEmpty {
                     let defaultSymbols = Date.FormatStyle.DateFieldCollection()
                         .collection(date: .numeric)
                         .collection(time: .shortened)
-                    template = defaultSymbols.formatterTemplate
+                    template = defaultSymbols.formatterTemplate(overridingDayPeriodWithLocale: locale)
                 }
 
                 return ICUDateIntervalFormatter(locale: locale, calendar: calendar, timeZone: timeZone, dateTemplate: template)
@@ -159,3 +143,24 @@ public extension FormatStyle where Self == Date.IntervalFormatStyle {
         return Date.IntervalFormatStyle()
     }
 }
+
+@available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
+extension Range where Bound == Date {
+    
+    /// Formats the date range as an interval.
+    public func formatted() -> String {
+        Date.IntervalFormatStyle().format(self)
+    }
+    
+    /// Formats the date range using the specified date and time format styles.
+    public func formatted(date: Date.IntervalFormatStyle.DateStyle, time: Date.IntervalFormatStyle.TimeStyle) -> String {
+        Date.IntervalFormatStyle(date: date, time: time).format(self)
+    }
+    
+    /// Formats the date range using the specified style.
+    public func formatted<S>(_ style: S) -> S.FormatOutput where S : FormatStyle, S.FormatInput == Range<Date> {
+        style.format(self)
+    }
+    
+}
+

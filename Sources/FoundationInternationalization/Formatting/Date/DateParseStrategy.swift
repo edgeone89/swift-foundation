@@ -64,7 +64,7 @@ extension Date {
         }
 
         internal init(formatStyle: Date.FormatStyle, lenient: Bool, twoDigitStartDate: Date = Date(timeIntervalSince1970: 0)) {
-            let pattern = ICUPatternGenerator.localizedPatternForSkeleton(localeIdentifier: formatStyle.locale.identifier, calendarIdentifier: formatStyle.calendar.identifier, skeleton: formatStyle.symbols.formatterTemplate, hourCycleOption: .default)
+            let pattern = ICUPatternGenerator.localizedPattern(symbols: formatStyle.symbols, locale: formatStyle.locale, calendar: formatStyle.calendar)
             self.init(format: pattern, locale: formatStyle.locale, timeZone: formatStyle.timeZone, calendar: formatStyle.calendar, isLenient: lenient, twoDigitStartDate: twoDigitStartDate)
         }
     }
@@ -97,7 +97,7 @@ public extension ParseStrategy {
 @available(macOS 13.0, iOS 16.0, tvOS 16.0, watchOS 9.0, *)
 extension Date.ParseStrategy : CustomConsumingRegexComponent {
     public typealias RegexOutput = Date
-    public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)?  {
+    public func consuming(_ input: String, startingAt index: String.Index, in bounds: Range<String.Index>) throws -> (upperBound: String.Index, output: Date)? {
         guard index < bounds.upperBound else {
             return nil
         }

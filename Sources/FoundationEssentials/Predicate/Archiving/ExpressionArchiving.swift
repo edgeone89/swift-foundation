@@ -20,12 +20,14 @@ enum PredicateCodableError : Error, CustomStringConvertible {
     case disallowedType(typeName: String, path: String)
     case disallowedIdentifier(String, path: String)
     case reconstructionFailure(PartialType, [Type])
+    case variadicType(typeName: String, path: String)
     
     var description: String {
         switch self {
         case .disallowedType(let typeName, let path): return "The '\(typeName)' type is not in the provided allowlist (required by \(path))"
         case .disallowedIdentifier(let id, let path): return "The '\(id)' identifier is not in the provided allowlist (required by \(path))"
         case .reconstructionFailure(let partial, let args): return "Reconstruction of '\(partial.name)' with the arguments \(args.map(\.swiftType)) failed"
+        case .variadicType(let typeName, let path): return "The '\(typeName)' type is not allowed because it contains type pack parameters (required by \(path))"
         }
     }
 }
@@ -63,6 +65,11 @@ private struct ExpressionStructure : Codable {
     }
     
     init(_ type: Type, with configuration: PredicateCodableConfiguration, path: [String] = []) throws {
+#if canImport(ReflectionInternal, _version: "18")
+        if type.partial?.hasParameterPacks ?? false {
+            throw PredicateCodableError.variadicType(typeName: _typeName(type.swiftType), path: "/\(path.joined(separator: "/"))")
+        }
+#endif
         guard let result = configuration._identifier(for: type) else {
             throw PredicateCodableError.disallowedType(typeName: _typeName(type.swiftType), path: "/\(path.joined(separator: "/"))")
         }
@@ -90,6 +97,12 @@ private struct ExpressionStructure : Codable {
         case .partial(let partialType):
             partial = partialType
         }
+        
+#if canImport(ReflectionInternal, _version: "18")
+        if partial.hasParameterPacks {
+            throw PredicateCodableError.variadicType(typeName: partial.name, path: "/\(path.joined(separator: "/"))")
+        }
+#endif
         
         let argTypes = try args.map {
             try $0.reconstruct(with: configuration, path: path + [identifier])
@@ -135,14 +148,26 @@ enum PredicateExpressionCodingKeys : CodingKey {
 }
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+fileprivate extension PredicateCodableConfiguration {
+    mutating func allowInputs<each Input>(_ input: repeat (each Input).Type) {
+        var inputTypes = [Any.Type]()
+        _ = (repeat inputTypes.append((each Input).self))
+        for (index, type) in inputTypes.enumerated() {
+            allowType(type, identifier: "Foundation.Predicate.Input.\(index)")
+        }
+    }
+}
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
-    mutating func _encode<T: PredicateExpression & Encodable, Input>(_ expression: T, variables: (PredicateExpressions.Variable<Input>), predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
+    mutating func _encode<T: PredicateExpression & Encodable, each Input>(_ expression: T, variable: repeat PredicateExpressions.Variable<each Input>, predicateConfiguration: PredicateCodableConfiguration) throws where T.Output == Bool {
         var predicateConfiguration = predicateConfiguration
-        predicateConfiguration.allowType(Input.self, identifier: "Foundation.Predicate.Input.0")
+        predicateConfiguration.allowInputs(repeat (each Input).self)
         let structure = try ExpressionStructure(Type(expression), with: predicateConfiguration)
         var state = PredicateArchivingState(configuration: predicateConfiguration)
+        var variableContainer = self.nestedUnkeyedContainer(forKey: .variable)
+        _ = (repeat try variableContainer.encode(each variable))
         try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
-            try self.encode(variables, forKey: .variable)
             try self.encode(structure, forKey: .structure)
             try self.encode(expression, forKey: .expression)
         }
@@ -151,9 +176,9 @@ extension KeyedEncodingContainer where Key == PredicateExpressionCodingKeys {
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
-    mutating func _decode<Input>(inputs: (Input.Type), predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variables: (PredicateExpressions.Variable<Input>)) {
+    mutating func _decode<each Input>(input: repeat (each Input).Type, predicateConfiguration: PredicateCodableConfiguration) throws -> (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>)) {
         var predicateConfiguration = predicateConfiguration
-        predicateConfiguration.allowType(Input.self, identifier: "Foundation.Predicate.Input.0")
+        predicateConfiguration.allowInputs(repeat (each Input).self)
         let structure = try self.decode(ExpressionStructure.self, forKey: .structure)
 
         func decode<E: Decodable & PredicateExpression>(_: E.Type) throws -> any PredicateExpression<Bool> where E.Output == Bool {
@@ -164,10 +189,12 @@ extension KeyedDecodingContainer where Key == PredicateExpressionCodingKeys {
             throw DecodingError.dataCorruptedError(forKey: .structure, in: self, debugDescription: "This expression is unsupported by this predicate")
         }
         var state = PredicateArchivingState(configuration: predicateConfiguration)
+        var container = try self.nestedUnkeyedContainer(forKey: .variable)
         return try _ThreadLocal.withValue(&state, for: .predicateArchivingState) {
-            let variable = try self.decode(PredicateExpressions.Variable<Input>.self, forKey: .variable)
-            return (try decode(exprType), variable)
-        }
+            let variable = (repeat try container.decode(PredicateExpressions.Variable<each Input>.self))
+            // Box as an Any to work around compiler bug with closures that return values with pack expansions (rdar://111219086)
+            return (try decode(exprType), variable) as Any
+        } as! (expression: any PredicateExpression<Bool>, variable: (repeat PredicateExpressions.Variable<each Input>))
     }
 }
 

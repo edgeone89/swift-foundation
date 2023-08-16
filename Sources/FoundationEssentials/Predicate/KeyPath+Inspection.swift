@@ -27,7 +27,7 @@ extension UInt32 {
         Int((self & Self.COMPONENT_HEADER_KIND_MASK) >> 24)
     }
     
-    private var _keyPathComponentHeader_payload: UInt32 {
+    fileprivate var _keyPathComponentHeader_payload: UInt32 {
         self & Self.COMPONENT_HEADER_PAYLOAD_MASK
     }
     
@@ -38,6 +38,10 @@ extension UInt32 {
     fileprivate var _keyPathComponentHeader_computedIsSettable: Bool {
         (_keyPathComponentHeader_payload & Self.COMPUTED_COMPONENT_PAYLOAD_SETTABLE_MASK) != 0
     }
+}
+
+private func _keyPathOffset<T>(_ root: T.Type, _ keyPath: AnyKeyPath) -> Int? {
+    MemoryLayout<T>.offset(of: keyPath as! PartialKeyPath<T>)
 }
 
 extension AnyKeyPath {
@@ -53,8 +57,11 @@ extension AnyKeyPath {
         case 1: // struct/tuple/self stored property
             fallthrough
         case 3: // class stored property
-            // Stored property components are each one word
-            if header._keyPathHeader_bufferSize > Self.WORD_SIZE {
+            // Key paths to stored properties are only single-component if MemoryLayout.offset(of:) returns an offset
+            func project<T>(_: T.Type) -> Bool {
+                _keyPathOffset(T.self, self) == nil
+            }
+            if _openExistential(Self.rootType, do: project) {
                 fatalError("Predicate does not support keypaths with multiple components")
             }
         case 2: // computed

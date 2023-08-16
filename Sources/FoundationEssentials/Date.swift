@@ -214,8 +214,13 @@ public struct Date : Comparable, Hashable, Equatable, Sendable {
 extension Date {
     private static func getCurrentAbsoluteTime() -> TimeInterval {
 #if canImport(WinSDK)
-        // TODO: WinSDK Implementation
-        fatalError("getCurrentAbsoluteTime not implemented for Windows yet")
+        var ft: FILETIME = FILETIME()
+        var li: ULARGE_INTEGER = ULARGE_INTEGER()
+        GetSystemTimePreciseAsFileTime(&ft)
+        li.LowPart = ft.dwLowDateTime
+        li.HighPart = ft.dwHighDateTime
+        // FILETIME represents 100-ns intervals since January 1, 1601 (UTC)
+        return TimeInterval((li.QuadPart - 1164447360_000_000) / 1_000_000_000)
 #else
         var ts: timespec = timespec()
         clock_gettime(CLOCK_REALTIME, &ts)
@@ -256,8 +261,14 @@ extension Date : CustomDebugStringConvertible, CustomStringConvertible, CustomRe
         }
 
         var info = tm()
+#if os(Windows)
+        var time = __time64_t(self.timeIntervalSince1970)
+        let errno: errno_t = _gmtime64_s(&info, &time)
+        guard errno == 0 else { return unavailable }
+#else
         var time = time_t(self.timeIntervalSince1970)
         gmtime_r(&time, &info)
+#endif
 
         // This allocates stack space for range of 10^102 years
         // That's more than Date currently supports.

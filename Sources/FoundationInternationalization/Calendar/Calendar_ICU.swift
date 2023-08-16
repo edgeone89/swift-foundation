@@ -18,6 +18,10 @@ import FoundationEssentials
 import Glibc
 #endif
 
+#if canImport(CRT)
+import CRT
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
 #else
@@ -1143,7 +1147,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
     }
 
     func weekendRange() -> WeekendRange? {
-        return lock.withLock {
+        return lock.withLock { () -> WeekendRange? in
             var result = WeekendRange(start: 0, end: 0)
 
             var weekdaysIndex : [UInt32] = [0, 0, 0, 0, 0, 0, 0]
@@ -1159,7 +1163,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
 
             for i in 0..<7 {
                 var status = U_ZERO_ERROR
-                weekdayTypes[i] = ucal_getDayOfWeekType(ucalendar, UCalendarDaysOfWeek(rawValue: weekdaysIndex[i]), &status)
+                weekdayTypes[i] = ucal_getDayOfWeekType(ucalendar, UCalendarDaysOfWeek(CInt(weekdaysIndex[i])), &status)
                 if weekdayTypes[i] == UCAL_WEEKEND_ONSET {
                     onset = weekdaysIndex[i]
                 } else if weekdayTypes[i] == UCAL_WEEKEND_CEASE {
@@ -1178,13 +1182,13 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             if let onset {
                 var status = U_ZERO_ERROR
                 // onsetTime is milliseconds after midnight at which the weekend starts. Divide to get to TimeInterval (seconds)
-                result.onsetTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(rawValue: onset), &status)) / 1000.0
+                result.onsetTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(CInt(onset)), &status)) / 1000.0
             }
 
             if let cease {
                 var status = U_ZERO_ERROR
                 // onsetTime is milliseconds after midnight at which the weekend ends. Divide to get to TimeInterval (seconds)
-                result.ceaseTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(rawValue: cease), &status)) / 1000.0
+                result.ceaseTime = Double(ucal_getWeekendTransition(ucalendar, UCalendarDaysOfWeek(CInt(cease)), &status)) / 1000.0
             }
 
             var weekendStart: UInt32?
@@ -1377,6 +1381,8 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             if let amount = components.month { _ = _locked_add(UCAL_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.day { _ = _locked_add(UCAL_DAY_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.weekOfYear { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
+            // `week` is for backward compatibility only, and is only used if weekOfYear is missing
+            if let amount = components.week, components.weekOfYear == nil { _ = _locked_add(UCAL_WEEK_OF_YEAR, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.weekOfMonth { _ = _locked_add(UCAL_WEEK_OF_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.weekday { _ = _locked_add(UCAL_DAY_OF_WEEK, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.weekdayOrdinal { _ = _locked_add(UCAL_DAY_OF_WEEK_IN_MONTH, amount: amount, wrap: wrappingComponents, status: &status) }
@@ -1385,7 +1391,7 @@ internal final class _Calendar: Equatable, @unchecked Sendable {
             if let amount = components.second { _ = _locked_add(UCAL_SECOND, amount: amount, wrap: wrappingComponents, status: &status) }
             if let amount = components.nanosecond { nanosecond = amount }
 
-            let udate = ucal_getMillis(ucalendar, &status)
+            let udate = ucal_getMillis(self.ucalendar, &status)
             if status.isSuccess {
                 return Date(udate: udate) + startingFrac + (Double(nanosecond) * 1.0e-9)
             } else {

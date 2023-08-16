@@ -16,6 +16,12 @@
 package import FoundationICU
 #endif
 
+#if os(Windows)
+typealias EnumRawType = CInt
+#else
+typealias EnumRawType = CUnsignedInt
+#endif
+
 extension UBool {
     static let `true` = UBool(1)
     static let `false` = UBool(0)
@@ -23,6 +29,39 @@ extension UBool {
         if self == 0 { return false }
         else { return true }
     }
+}
+
+extension UDateFormatSymbolType {
+    static let eras = UDAT_ERAS
+    static let months = UDAT_MONTHS
+    static let shortMonths = UDAT_SHORT_MONTHS
+    static let weekdays = UDAT_WEEKDAYS
+    static let shortWeekdays = UDAT_SHORT_WEEKDAYS
+    static let amPMs = UDAT_AM_PMS
+    static let localizedCharacters = UDAT_LOCALIZED_CHARS
+    static let eraNames = UDAT_ERA_NAMES
+    static let narrowMonths = UDAT_NARROW_MONTHS
+    static let narrowWeekdays = UDAT_NARROW_WEEKDAYS
+    static let standaloneMonths = UDAT_STANDALONE_MONTHS
+    static let standaloneShortMonths = UDAT_STANDALONE_SHORT_MONTHS
+    static let standaloneNarrowMonths = UDAT_STANDALONE_NARROW_MONTHS
+    static let standaloneWeekdays = UDAT_STANDALONE_WEEKDAYS
+    static let standaloneShortWeekdays = UDAT_STANDALONE_SHORT_WEEKDAYS
+    static let standaloneNarrowWeekdays = UDAT_STANDALONE_NARROW_WEEKDAYS
+    static let quarters = UDAT_QUARTERS
+    static let shortQuarters = UDAT_SHORT_QUARTERS
+    static let standaloneQuarters = UDAT_STANDALONE_QUARTERS
+    static let standaloneShortQuarters = UDAT_STANDALONE_SHORT_QUARTERS
+    static let shorterWeekdays = UDAT_SHORTER_WEEKDAYS
+    static let standaloneShorterWeekdays = UDAT_STANDALONE_SHORTER_WEEKDAYS
+    static let cyclicYearsWide = UDAT_CYCLIC_YEARS_WIDE
+    static let cyclicYearsAbbreviated = UDAT_CYCLIC_YEARS_ABBREVIATED
+    static let cyclicYearsNarrow = UDAT_CYCLIC_YEARS_NARROW
+    static let zodiacNamesWide = UDAT_ZODIAC_NAMES_WIDE
+    static let zodiacNamesAbbreviated = UDAT_ZODIAC_NAMES_ABBREVIATED
+    static let zodiacNamesNarrow = UDAT_ZODIAC_NAMES_NARROW
+    static let narrowQuarters = UDAT_NARROW_QUARTERS
+    static let standaloneNarrowQuarters = UDAT_STANDALONE_NARROW_QUARTERS
 }
 
 extension UDisplayContext {
@@ -70,6 +109,10 @@ extension UNumberFormatAttribute {
     static let parseDecimalMarkRequired = UNUM_PARSE_DECIMAL_MARK_REQUIRED
     static let parseCaseSensitive = UNUM_PARSE_CASE_SENSITIVE
     static let signAlwaysShown = UNUM_SIGN_ALWAYS_SHOWN
+}
+
+extension UNumberFormatTextAttribute {
+    static let defaultRuleSet = UNUM_DEFAULT_RULESET
 }
 
 extension UDateRelativeDateTimeFormatterStyle {
@@ -147,6 +190,12 @@ extension UDateFormatField {
     static let flexibleDayPeriod = UDAT_FLEXIBLE_DAY_PERIOD_FIELD
 }
 
+extension UDateFormatField {
+  internal init(_ rawValue: CInt) {
+    self.init(rawValue: EnumRawType(rawValue))
+  }
+}
+
 extension UCalendarAttribute {
     static let lenient = UCAL_LENIENT
     static let firstDayOfWeek = UCAL_FIRST_DAY_OF_WEEK
@@ -182,6 +231,12 @@ extension UNumberFormatFields {
     static let measureUnit = UNUM_MEASURE_UNIT_FIELD
 }
 
+extension UNumberFormatFields {
+  internal init(_ rawValue: CInt) {
+    self.init(rawValue: EnumRawType(rawValue))
+  }
+}
+
 extension UDateFormatHourCycle {
     static let hourCycle11 = UDAT_HOUR_CYCLE_11
     static let hourCycle12 = UDAT_HOUR_CYCLE_12
@@ -193,4 +248,16 @@ extension UATimeUnitTimePattern {
     static let hourMinute = UATIMEUNITTIMEPAT_HM
     static let hourMinuteSecond = UATIMEUNITTIMEPAT_HMS
     static let minuteSecond = UATIMEUNITTIMEPAT_MS
+}
+
+extension UCalendarDaysOfWeek {
+    internal init(_ rawValue: CInt) {
+        self.init(rawValue: EnumRawType(rawValue))
+    }
+}
+
+extension UNumberFormatSymbol {
+    internal init(_ rawValue: CInt) {
+        self.init(rawValue: EnumRawType(rawValue))
+    }
 }

@@ -13,7 +13,7 @@
 /*
  A JSONMap is created by a JSON scanner to describe the values found in a JSON payload, including their size, location, and contents, without copying any of the non-structural data. It is used by the JSONDecoder, which will fully parse only those values that are required to decode the requested Decodable types.
 
- To minimize the number of allocations required during scanning, the map's contents are implemented using a array of integers, whose values are a serialization of the JSON payload's full structure. Each type has its own unique marker value, which is followed by zero or more other integers that describe that contents of that type, if any.
+ To minimize the number of allocations required during scanning, the map's contents are implemented using an array of integers, whose values are a serialization of the JSON payload's full structure. Each type has its own unique marker value, which is followed by zero or more other integers that describe that contents of that type, if any.
 
  Due to the complexity and additional allocations required to parse JSON string values into Swift Strings or JSON number values into the requested integer or floating-point types, their map contents are captured as lengths of bytes and byte offsets into the input. This allows the full parsing to occur at decode time, or to be skipped if the value is not desired. A partial, imperfect parsing is performed by the scanner, simply "skipping" characters which are valid in their given contexts without interpreting or further validating them relative to the other inputs. This incomplete scanning process does however guarantee that the structure of the JSON input is correctly interpreted.
 
@@ -806,7 +806,7 @@ extension JSONScanner {
 
         private mutating func skipEscapeSequence() throws {
             let firstChar = self.read()
-            precondition(firstChar == ._backslash, "Expected to have an backslash first")
+            precondition(firstChar == ._backslash, "Expected to have a backslash first")
 
             guard let ascii = self.read() else {
                 throw JSONError.unexpectedEndOfFile
@@ -898,7 +898,7 @@ extension JSONScanner {
             jsonBytes.formIndex(after: &index)
         }
 
-        guard let output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
+        guard var output = String._tryFromUTF8(jsonBytes[unchecked: jsonBytes.startIndex..<index]) else {
             throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: jsonBytes.startIndex, fullSource: fullSource))
         }
         if _fastPath(index == endIndex) {
@@ -907,16 +907,13 @@ extension JSONScanner {
         }
 
         let remainingBytes = jsonBytes[unchecked: index..<endIndex]
-        return try _slowpath_stringValue(from: remainingBytes, appendingTo: output, fullSource: fullSource)
+        try _slowpath_stringValue(from: remainingBytes, appendingTo: &output, fullSource: fullSource)
+        return output
     }
 
     static func _slowpath_stringValue(
-        from jsonBytes: BufferView<UInt8>, appendingTo output: __owned String, fullSource: BufferView<UInt8>
-    ) throws -> String {
-        var output = consume output
-        // A reasonable guess as to the resulting capacity of the string is 1/4 the length of the remaining buffer. With this scheme, input full of 4 byte UTF-8 sequences won't waste a bunch of extra capacity and predominantly 1 byte UTF-8 sequences will only need to resize the buffer once or twice.
-        output.reserveCapacity(output.underestimatedCount + jsonBytes.count/4)
-
+        from jsonBytes: BufferView<UInt8>, appendingTo output: inout String, fullSource: BufferView<UInt8>
+    ) throws {
         // Continue scanning, taking into account escaped sequences and control characters
         var index = jsonBytes.startIndex
         var chunkStart = index
@@ -950,8 +947,6 @@ extension JSONScanner {
             throw JSONError.cannotConvertInputStringDataToUTF8(location: .sourceLocation(at: chunkStart, fullSource: fullSource))
         }
         output += stringChunk
-
-        return output
     }
 
     private static func parseEscapeSequence(

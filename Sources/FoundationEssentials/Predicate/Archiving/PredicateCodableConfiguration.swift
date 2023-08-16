@@ -346,13 +346,19 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(Dictionary<Int, Int>.self, identifier: "Swift.Dictionary")
         configuration.allowPartialType(Set<Int>.self, identifier: "Swift.Set")
         configuration.allowPartialType(Optional<Int>.self, identifier: "Swift.Optional")
+        configuration.allowPartialType(Slice<String>.self, identifier: "Swift.Slice")
         
         // Foundation-defined PredicateExpression types
         configuration.allowPartialType(PredicateExpressions.Arithmetic<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Arithmetic")
         configuration.allowPartialType(PredicateExpressions.ClosedRange<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.ClosedRange")
+        configuration.allowPartialType(PredicateExpressions.CollectionContainsCollection<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.CollectionContainsCollection")
+        configuration.allowPartialType(PredicateExpressions.CollectionIndexSubscript<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.CollectionIndexSubscript")
+        configuration.allowPartialType(PredicateExpressions.CollectionRangeSubscript<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Range<Int>>>.self, identifier: "PredicateExpressions.CollectionRangeSubscript")
         configuration.allowPartialType(PredicateExpressions.Comparison<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Comparison")
         configuration.allowPartialType(PredicateExpressions.Conditional<PredicateExpressions.Value<Bool>, PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.Conditional")
         configuration.allowPartialType(PredicateExpressions.Conjunction<PredicateExpressions.Value<Bool>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.Conjunction")
+        configuration.allowPartialType(PredicateExpressions.DictionaryKeyDefaultValueSubscript<PredicateExpressions.Value<[Int:Int]>, PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.DictionaryKeyDefaultValueSubscript")
+        configuration.allowPartialType(PredicateExpressions.DictionaryKeySubscript<PredicateExpressions.Value<[Int:Int]>, PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.DictionaryKeySubscript")
         configuration.allowPartialType(PredicateExpressions.Disjunction<PredicateExpressions.Value<Bool>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.Disjunction")
         configuration.allowPartialType(PredicateExpressions.IntDivision<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.IntDivision")
         configuration.allowPartialType(PredicateExpressions.IntRemainder<PredicateExpressions.Value<Int>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.IntRemainder")
@@ -368,10 +374,20 @@ extension PredicateCodableConfiguration {
         configuration.allowPartialType(PredicateExpressions.SequenceContains<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.SequenceContains")
         configuration.allowPartialType(PredicateExpressions.SequenceContainsWhere<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.SequenceContainsWhere")
         configuration.allowPartialType(PredicateExpressions.SequenceContainsWhere<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<Bool>>.self, identifier: "PredicateExpressions.SequenceAllSatisfy")
+        configuration.allowPartialType(PredicateExpressions.SequenceStartsWith<PredicateExpressions.Value<[Int]>, PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.SequenceStartsWith")
+        configuration.allowPartialType(PredicateExpressions.SequenceMaximum<PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.SequenceMaximum")
+        configuration.allowPartialType(PredicateExpressions.SequenceMinimum<PredicateExpressions.Value<[Int]>>.self, identifier: "PredicateExpressions.SequenceMinimum")
         configuration.allowPartialType(PredicateExpressions.ConditionalCast<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.ConditionalCast")
         configuration.allowPartialType(PredicateExpressions.ForceCast<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.ForceCast")
         configuration.allowPartialType(PredicateExpressions.TypeCheck<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.TypeCheck")
         configuration.allowPartialType(PredicateExpressions.UnaryMinus<PredicateExpressions.Value<Int>>.self, identifier: "PredicateExpressions.UnaryMinus")
+        configuration.allowPartialType(PredicateExpressions.NilLiteral<Int>.self, identifier: "PredicateExpressions.NilLiteral")
+        
+        #if FOUNDATION_FRAMEWORK
+        configuration.allowPartialType(PredicateExpressions.StringCaseInsensitiveCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringCaseInsensitiveCompare")
+        configuration.allowPartialType(PredicateExpressions.StringLocalizedCompare<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringLocalizedCompare")
+        configuration.allowPartialType(PredicateExpressions.StringLocalizedStandardContains<PredicateExpressions.Value<String>, PredicateExpressions.Value<String>>.self, identifier: "PredicateExpressions.StringLocalizedStandardContains")
+        #endif
         
         configuration.allowPartialType(PredicateExpressions.KeyPath<PredicateExpressions.Value<Int>, Int>.self, identifier: "PredicateExpressions.KeyPath")
         configuration.allowPartialType(PredicateExpressions.Variable<Int>.self, identifier: "PredicateExpressions.Variable")

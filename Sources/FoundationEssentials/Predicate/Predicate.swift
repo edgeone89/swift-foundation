@@ -11,19 +11,50 @@
 //===----------------------------------------------------------------------===//
 
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
-public struct Predicate<Input> : Sendable {
+public struct Predicate<each Input> : Sendable {
     public let expression : any StandardPredicateExpression<Bool>
-    public let variable: (PredicateExpressions.Variable<Input>)
-    
-    public init<E: StandardPredicateExpression<Bool>>(_ builder: (PredicateExpressions.Variable<Input>) -> E) {
-        self.variable = PredicateExpressions.Variable<Input>()
-        self.expression = builder(self.variable)
+    public let variable: (repeat PredicateExpressions.Variable<each Input>)
+
+    @usableFromInline // Preserve ABI for older initializer
+    internal init<E: StandardPredicateExpression<Bool>>(_ builder: (repeat PredicateExpressions.Variable<each Input>) -> E) {
+        self.variable = (repeat PredicateExpressions.Variable<each Input>())
+        self.expression = builder(repeat each variable.element)
     }
     
-    public func evaluate(_ input: Input) throws -> Bool {
-        try expression.evaluate(.init((variable, input)))
+    public init(_ builder: (repeat PredicateExpressions.Variable<each Input>) -> any StandardPredicateExpression<Bool>) {
+        self.variable = (repeat PredicateExpressions.Variable<each Input>())
+        self.expression = builder(repeat each variable.element)
+    }
+    
+    public func evaluate(_ input: repeat each Input) throws -> Bool {
+        try expression.evaluate(
+            .init(repeat (each variable.element, each input))
+        )
     }
 }
+
+#if !os(Linux) && !os(Windows)
+@freestanding(expression)
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+public macro Predicate<each Input>(_ body: (repeat each Input) -> Bool) -> Predicate<repeat each Input> = #externalMacro(module: "FoundationMacros", type: "PredicateMacro")
+#endif
+
+@available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
+extension Predicate {
+    private init(value: Bool) {
+        self.variable = (repeat PredicateExpressions.Variable<each Input>())
+        self.expression = PredicateExpressions.Value(value)
+    }
+    
+    public static var `true`: Self {
+        Self(value: true)
+    }
+    
+    public static var `false`: Self {
+        Self(value: false)
+    }
+}
+
 
 // Namespace for operator expressions
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)

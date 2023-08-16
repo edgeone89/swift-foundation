@@ -39,9 +39,17 @@ internal class ICUNumberFormatterBase {
         self.skeleton = skeleton
         let ustr = Array(skeleton.utf16)
         var status = U_ZERO_ERROR
-        let formatter = unumf_openForSkeletonAndLocale(ustr, Int32(ustr.count), locale.identifier, &status)
+        let formatter = unumf_openForSkeletonAndLocale(ustr, Int32(ustr.count), locale.identifierCapturingPreferences, &status)
 
-        guard let formatter, status.isSuccess else { return nil }
+        guard let formatter else {
+            return nil
+        }
+
+        guard status.isSuccess else {
+            unumf_close(formatter)
+            return nil
+        }
+
         uformatter = formatter
     }
 
@@ -143,7 +151,7 @@ internal class ICUNumberFormatterBase {
             try status.checkSuccess()
 
             let attributePositions = positer.fields.compactMap { next -> AttributePosition? in
-                return AttributePosition(field: UNumberFormatFields(rawValue: UInt32(next.field)), begin: next.begin, end: next.end)
+                return AttributePosition(field: UNumberFormatFields(CInt(next.field)), begin: next.begin, end: next.end)
             }
 
             return (str, attributePositions)

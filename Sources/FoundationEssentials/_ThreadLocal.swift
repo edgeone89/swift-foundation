@@ -1,6 +1,6 @@
 //===----------------------------------------------------------------------===//
 //
-// This source file is part of the Observation open source project
+// This source file is part of the Swift.org open source project
 //
 // Copyright (c) 2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
@@ -10,9 +10,6 @@
 //===----------------------------------------------------------------------===//
 
 #if canImport(Darwin)
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly
-#endif
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
@@ -24,7 +21,7 @@ struct _ThreadLocal {
 #if canImport(Darwin) || canImport(Glibc)
     fileprivate typealias PlatformKey = pthread_key_t
 #elseif canImport(WinSDK)
-    fileprivate typealias PlatformKey = UInt
+    fileprivate typealias PlatformKey = DWORD
 #endif
     
     struct Key<Value> {

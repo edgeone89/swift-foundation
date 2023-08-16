@@ -10,45 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// MARK: - Exported Types
-extension String {
-#if FOUNDATION_FRAMEWORK
-    public typealias CompareOptions = NSString.CompareOptions
-#else
-    /// These options apply to the various search/find and comparison methods (except where noted).
-    public struct CompareOptions : OptionSet, Sendable {
-        public let rawValue: UInt
-
-        public init(rawValue: UInt) {
-            self.rawValue = rawValue
-        }
-
-        static let caseInsensitive = CompareOptions(rawValue: 1)
-        /// Exact character-by-character equivalence
-        static let literal = CompareOptions(rawValue: 2)
-        /// Search from end of source string
-        static let backwards = CompareOptions(rawValue: 4)
-        /// Search is limited to start (or end, if `.backwards`) of source string
-        static let anchored  = CompareOptions(rawValue: 8)
-        /// Numbers within strings are compared using numeric value, that is,
-        /// Foo2.txt < Foo7.txt < Foo25.txt;
-        /// only applies to compare methods, not find
-        static let numeric   = CompareOptions(rawValue: 64)
-        /// If specified, ignores diacritics (o-umlaut == o)
-        static let diacriticInsensitive = CompareOptions(rawValue: 128)
-        /// If specified, ignores width differences ('a' == UFF41)
-        static let widthInsensitive = CompareOptions(rawValue: 256)
-        /// If specified, comparisons are forced to return either `.orderedAscending`
-        /// or `.orderedDescending` if the strings are equivalent but not strictly equal,
-        /// for stability when sorting (e.g. "aaa" > "AAA" with `.caseInsensitive` specified)
-        static let forcedOrdering = CompareOptions(rawValue: 512)
-        /// The search string is treated as an ICU-compatible regular expression;
-        /// if set, no other options can apply except `.caseInsensitive` and `.anchored`
-        static let regularExpression = CompareOptions(rawValue: 1024)
-    }
-#endif // FOUNDATION_FRAMEWORK
-}
-
 extension UTF8.CodeUnit {
     static let newline: Self = 0x0A
     static let carriageReturn: Self = 0x0D
@@ -103,7 +64,7 @@ extension _StringCompareOptionsIterable {
         var value = initialValue
         while i < endIndex {
             let c = self[i]
-            guard let num = c.intValue else  {
+            guard let num = c.intValue else {
                 break
             }
             // equivalent to `value = value * 10 + num` but considering overflow
@@ -193,7 +154,7 @@ extension _StringCompareOptionsIterable {
                 }
             }
 
-            if c1 != c2  {
+            if c1 != c2 {
                 if !(toHalfWidth || diacriticsInsensitive || caseFold) {
                     return ComparisonResult(c1, c2)
                 }
@@ -436,60 +397,6 @@ extension _StringCompareOptionsIterable {
             formIndex(&fromLoc, offsetBy: delta)
         }
 
-
-        return result
-    }
-
-    func _range<S: BidirectionalCollection>(of strToFind: S, anchored: Bool, backwards: Bool) -> Range<Index>? where S.Element == Element {
-        var result: Range<Index>? = nil
-        var fromLoc: Index
-        var toLoc: Index
-        if backwards {
-            guard let idx = _index(endIndex, backwardsOffsetByCountOf: strToFind) else {
-                // strToFind.count > string.count: bail
-                return nil
-            }
-            fromLoc = idx
-
-            toLoc = anchored ? fromLoc : startIndex
-        } else {
-            fromLoc = startIndex
-            if anchored {
-                toLoc = fromLoc
-            } else {
-                guard let idx = _index(endIndex, backwardsOffsetByCountOf: strToFind) else {
-                    return nil
-                }
-                toLoc = idx
-            }
-        }
-
-        let delta = fromLoc <= toLoc ? 1 : -1
-
-        while true {
-            var str1Index = fromLoc
-            var str2Index = strToFind.startIndex
-
-            while str2Index < strToFind.endIndex && str1Index < endIndex {
-                if self[str1Index] != strToFind[str2Index] {
-                    break
-                }
-                formIndex(after: &str1Index)
-                strToFind.formIndex(after: &str2Index)
-            }
-
-            if str2Index == strToFind.endIndex {
-                result = fromLoc..<str1Index
-                break
-            }
-
-            if fromLoc == toLoc {
-                break
-            }
-
-            formIndex(&fromLoc, offsetBy: delta)
-        }
-
         return result
     }
 }
@@ -720,31 +627,6 @@ extension Substring {
         let result: Range<Index>?
         if options.contains(.literal) {
             result = unicodeScalars._range(of: strToFind.unicodeScalars, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
-        } else if !toHalfWidth && !diacriticsInsensitive && !caseFold {
-            // Fast path: iterate through UTF8 view when we don't need to transform string content
-            guard let utf8Result = utf8._range(of: strToFind.utf8, anchored: anchored, backwards: backwards) else {
-                 return nil
-            }
-
-            // Adjust the index to that of the original slice since we called `makeContiguousUTF8` before
-            guard let lower = String.Index(utf8Result.lowerBound, within: self), let upper = String.Index(utf8Result.upperBound, within: self) else {
-                return nil
-            }
-            result = lower..<upper
-
-        } else if _isASCII && strToFind._isASCII {
-            // Fast path: Iterate utf8 without having to decode as unicode scalars. In this case only case folding matters.
-
-            guard let utf8Result = utf8._range(of: strToFind.utf8, toHalfWidth: false, diacriticsInsensitive: false, caseFold: caseFold, anchored: anchored, backwards: backwards) else {
-                return nil
-            }
-
-            // Adjust the index to that of the original slice since we called `makeContiguousUTF8` before
-            guard let lower = String.Index(utf8Result.lowerBound, within: self), let upper = String.Index(utf8Result.upperBound, within: self) else {
-                return nil
-            }
-            result = lower..<upper
-
         } else {
             result = _range(of: strToFind, toHalfWidth: toHalfWidth, diacriticsInsensitive: diacriticsInsensitive, caseFold: caseFold, anchored: anchored, backwards: backwards)
         }
@@ -752,15 +634,16 @@ extension Substring {
         return result
     }
 
-    var _isASCII: Bool {
-        var mutated = self
-        return mutated.withUTF8 {
-            _allASCII($0)
-        }
-    }
-
     func _components(separatedBy separator: Substring, options: String.CompareOptions = []) throws -> [String] {
         var result = [String]()
+        try _enumerateComponents(separatedBy: separator, options: options) { substr, _ in
+            result.append(String(substr))
+        }
+        return result
+    }
+
+    // Only throws when using `.regularExpression` option
+    func _enumerateComponents(separatedBy separator: Substring, options: String.CompareOptions = [], withBlock block: (_ component: Substring, _ isLastComponent: Bool) -> ()) throws {
         var searchStart = startIndex
         while searchStart < endIndex {
             let r = try self[searchStart...]._range(of: separator, options: options)
@@ -768,13 +651,11 @@ extension Substring {
                 break
             }
 
-            result.append(String(self[searchStart ..< r.lowerBound]))
+            block(self[searchStart ..< r.lowerBound], false)
             searchStart = r.upperBound
         }
 
-        result.append(String(self[searchStart..<endIndex]))
-
-        return result
+        block(self[searchStart..<endIndex], true)
     }
 }
 
@@ -858,23 +739,6 @@ extension ComparisonResult {
         } else {
             self = .orderedSame
         }
-    }
-}
-
-extension BidirectionalCollection {
-    // Equal to calling `index(&idx, offsetBy: -other.count)` with just one loop
-    func _index<S: BidirectionalCollection>(_ index: Index, backwardsOffsetByCountOf other: S) -> Index? {
-        var idx = index
-        var otherIdx = other.endIndex
-        while otherIdx > other.startIndex  {
-            guard idx > startIndex else {
-                // other.count > self.count: bail
-                return nil
-            }
-            other.formIndex(before: &otherIdx)
-            formIndex(before: &idx)
-        }
-        return idx
     }
 }
 

@@ -18,6 +18,10 @@ import FoundationEssentials
 import Glibc
 #endif
 
+#if canImport(CRT)
+import CRT
+#endif
+
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import FoundationICU
 #else
@@ -420,13 +424,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.locale else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.locale = newValue ?? Locale.system
                 } else {
                     _calendar = _calendar.copy(changingLocale: newValue)
                 }
             case .autoupdating:
-                // Make a new, non-autoupdating copy
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: newValue)
@@ -455,12 +464,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.timeZone else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.timeZone = newValue
                 } else {
                     _calendar = _calendar.copy(changingTimeZone: newValue)
                 }
             case .autoupdating:
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: newValue, locale: c.locale)
@@ -489,12 +504,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.firstWeekday else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.firstWeekday = newValue
                 } else {
                     _calendar = _calendar.copy(changingFirstWeekday: newValue)
                 }
             case .autoupdating:
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: c.locale, firstWeekday: newValue)
@@ -523,12 +544,18 @@ public struct Calendar : Hashable, Equatable, Sendable {
         set {
             switch _kind {
             case .fixed:
+                guard newValue != _calendar.minimumDaysInFirstWeek else {
+                    // Nothing to do
+                    return
+                }
+                
                 if isKnownUniquelyReferenced(&_calendar) {
                     _calendar.minimumDaysInFirstWeek = newValue
                 } else {
                     _calendar = _calendar.copy(changingMinimumDaysInFirstWeek: newValue)
                 }
             case .autoupdating:
+                // Make a new, non-autoupdating copy. Even if the value is the same, we will mutate from autoupdating to fixed.
                 let c = CalendarCache.cache.current
                 _kind = .fixed
                 _calendar = _Calendar(identifier: c.identifier, timeZone: c.timeZone, locale: c.locale, minimumDaysInFirstWeek: newValue)
@@ -541,102 +568,9 @@ public struct Calendar : Hashable, Equatable, Sendable {
     }
 
     // MARK: - Symbols
-    private enum SymbolKey {
-        case eraSymbols
-        case longEraSymbols
-        case monthSymbols
-        case shortMonthSymbols
-        case veryShortMonthSymbols
-        case standaloneMonthSymbols
-        case shortStandaloneMonthSymbols
-        case veryShortStandaloneMonthSymbols
-        case weekdaySymbols
-        case shortWeekdaySymbols
-        case veryShortWeekdaySymbols
-        case standaloneWeekdaySymbols
-        case shortStandaloneWeekdaySymbols
-        case veryShortStandaloneWeekdaySymbols
-        case quarterSymbols
-        case shortQuarterSymbols
-        case standaloneQuarterSymbols
-        case shortStandaloneQuarterSymbols
-        case amSymbol
-        case pmSymbol
 
-#if FOUNDATION_FRAMEWORK
-        func toCFDateFormatterKey() -> CFDateFormatterKey {
-            switch self {
-            case .eraSymbols:
-                return .eraSymbols
-            case .longEraSymbols:
-                return .longEraSymbols
-            case .monthSymbols:
-                return .monthSymbols
-            case .shortMonthSymbols:
-                return .shortMonthSymbols
-            case .veryShortMonthSymbols:
-                return .veryShortMonthSymbols
-            case .standaloneMonthSymbols:
-                return .standaloneMonthSymbols
-            case .shortStandaloneMonthSymbols:
-                return .shortStandaloneMonthSymbols
-            case .veryShortStandaloneMonthSymbols:
-                return .veryShortStandaloneMonthSymbols
-            case .weekdaySymbols:
-                return .weekdaySymbols
-            case .shortWeekdaySymbols:
-                return .shortWeekdaySymbols
-            case .veryShortWeekdaySymbols:
-                return .veryShortWeekdaySymbols
-            case .standaloneWeekdaySymbols:
-                return .standaloneWeekdaySymbols
-            case .shortStandaloneWeekdaySymbols:
-                return .shortStandaloneWeekdaySymbols
-            case .veryShortStandaloneWeekdaySymbols:
-                return .veryShortStandaloneWeekdaySymbols
-            case .quarterSymbols:
-                return .quarterSymbols
-            case .shortQuarterSymbols:
-                return .shortQuarterSymbols
-            case .standaloneQuarterSymbols:
-                return .standaloneQuarterSymbols
-            case .shortStandaloneQuarterSymbols:
-                return .shortStandaloneQuarterSymbols
-            case .amSymbol:
-                return .amSymbol
-            case .pmSymbol:
-                return .pmSymbol
-            }
-        }
-#endif
-    }
-
-    private func symbols(for key: SymbolKey) -> [String] {
-#if FOUNDATION_FRAMEWORK
-        // TODO: (Calendar.symbols) Figure out how to replace this with modern FormatStyle
-        // rdar://71815286 (Allow formatting day/era/month symbols)
-        let cfdf = CFDateFormatterCreate(kCFAllocatorSystemDefault, (locale as? NSLocale), .noStyle, .noStyle)
-        guard let result = CFDateFormatterCopyProperty(cfdf, key.toCFDateFormatterKey()) else {
-            return []
-        }
-        return result as! [String]
-#else
-        return [""]
-#endif
-    }
-
-    private func symbol(for key: SymbolKey) -> String {
-#if FOUNDATION_FRAMEWORK
-        // TODO: (Calendar.symbols) Figure out how to replace this with modern FormatStyle
-        // rdar://71815286 (Allow formatting day/era/month symbols)
-        let cfdf = CFDateFormatterCreate(kCFAllocatorSystemDefault, (locale as? NSLocale), .noStyle, .noStyle)
-        guard let result = CFDateFormatterCopyProperty(cfdf, key.toCFDateFormatterKey()) else {
-            return ""
-        }
-        return result as! String
-#else
-        return ""
-#endif
+    private func symbols(for key: UDateFormatSymbolType) -> [String] {
+        ICUDateFormatter.cachedFormatter(for: self).symbols(for: key)
     }
 
     /// A list of eras in this calendar, localized to the Calendar's `locale`.
@@ -645,7 +579,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var eraSymbols: [String] {
-        symbols(for: .eraSymbols)
+        symbols(for: .eras)
     }
 
     /// A list of longer-named eras in this calendar, localized to the Calendar's `locale`.
@@ -654,7 +588,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var longEraSymbols: [String] {
-        symbols(for: .longEraSymbols)
+        symbols(for: .eraNames)
     }
 
     /// A list of months in this calendar, localized to the Calendar's `locale`.
@@ -663,7 +597,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var monthSymbols: [String] {
-        symbols(for: .monthSymbols)
+        symbols(for: .months)
     }
 
     /// A list of shorter-named months in this calendar, localized to the Calendar's `locale`.
@@ -672,7 +606,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var shortMonthSymbols: [String] {
-        symbols(for: .shortMonthSymbols)
+        symbols(for: .shortMonths)
     }
 
     /// A list of very-shortly-named months in this calendar, localized to the Calendar's `locale`.
@@ -681,7 +615,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var veryShortMonthSymbols: [String] {
-        symbols(for: .veryShortMonthSymbols)
+        symbols(for: .narrowMonths)
     }
 
     /// A list of standalone months in this calendar, localized to the Calendar's `locale`.
@@ -690,7 +624,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var standaloneMonthSymbols: [String] {
-        symbols(for: .standaloneMonthSymbols)
+        symbols(for: .standaloneMonths)
     }
 
     /// A list of shorter-named standalone months in this calendar, localized to the Calendar's `locale`.
@@ -699,7 +633,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var shortStandaloneMonthSymbols: [String] {
-        symbols(for: .shortStandaloneMonthSymbols)
+        symbols(for: .standaloneShortMonths)
     }
 
     /// A list of very-shortly-named standalone months in this calendar, localized to the Calendar's `locale`.
@@ -708,7 +642,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var veryShortStandaloneMonthSymbols: [String] {
-        symbols(for: .veryShortStandaloneMonthSymbols)
+        symbols(for: .standaloneNarrowMonths)
     }
 
     /// A list of weekdays in this calendar, localized to the Calendar's `locale`.
@@ -717,7 +651,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var weekdaySymbols: [String] {
-        symbols(for: .weekdaySymbols)
+        symbols(for: .weekdays)
     }
 
     /// A list of shorter-named weekdays in this calendar, localized to the Calendar's `locale`.
@@ -726,7 +660,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var shortWeekdaySymbols: [String] {
-        symbols(for: .shortWeekdaySymbols)
+        symbols(for: .shortWeekdays)
     }
 
     /// A list of very-shortly-named weekdays in this calendar, localized to the Calendar's `locale`.
@@ -735,7 +669,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var veryShortWeekdaySymbols: [String] {
-        symbols(for: .veryShortWeekdaySymbols)
+        symbols(for: .narrowWeekdays)
     }
 
     /// A list of standalone weekday names in this calendar, localized to the Calendar's `locale`.
@@ -744,7 +678,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var standaloneWeekdaySymbols: [String] {
-        symbols(for: .standaloneWeekdaySymbols)
+        symbols(for: .standaloneWeekdays)
     }
 
     /// A list of shorter-named standalone weekdays in this calendar, localized to the Calendar's `locale`.
@@ -753,7 +687,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var shortStandaloneWeekdaySymbols: [String] {
-        symbols(for: .shortStandaloneWeekdaySymbols)
+        symbols(for: .standaloneShortWeekdays)
     }
 
     /// A list of very-shortly-named weekdays in this calendar, localized to the Calendar's `locale`.
@@ -762,7 +696,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var veryShortStandaloneWeekdaySymbols: [String] {
-        symbols(for: .veryShortStandaloneWeekdaySymbols)
+        symbols(for: .standaloneNarrowWeekdays)
     }
 
     /// A list of quarter names in this calendar, localized to the Calendar's `locale`.
@@ -771,7 +705,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var quarterSymbols: [String] {
-        symbols(for: .quarterSymbols)
+        symbols(for: .quarters)
     }
 
     /// A list of shorter-named quarters in this calendar, localized to the Calendar's `locale`.
@@ -780,7 +714,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var shortQuarterSymbols: [String] {
-        symbols(for: .shortQuarterSymbols)
+        symbols(for: .shortQuarters)
     }
 
     /// A list of standalone quarter names in this calendar, localized to the Calendar's `locale`.
@@ -789,7 +723,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var standaloneQuarterSymbols: [String] {
-        symbols(for: .standaloneQuarterSymbols)
+        symbols(for: .standaloneQuarters)
     }
 
     /// A list of shorter-named standalone quarters in this calendar, localized to the Calendar's `locale`.
@@ -798,7 +732,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
     /// - note: Stand-alone properties are for use in places like calendar headers. Non-stand-alone properties are for use in context (for example, "Saturday, November 12th").
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var shortStandaloneQuarterSymbols: [String] {
-        symbols(for: .shortStandaloneQuarterSymbols)
+        symbols(for: .standaloneShortQuarters)
     }
 
     /// The symbol used to represent "AM", localized to the Calendar's `locale`.
@@ -807,7 +741,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var amSymbol: String {
-        symbol(for: .amSymbol)
+        let amPMs = symbols(for: .amPMs)
+        return amPMs[0]
     }
 
     /// The symbol used to represent "PM", localized to the Calendar's `locale`.
@@ -816,7 +751,8 @@ public struct Calendar : Hashable, Equatable, Sendable {
     ///
     /// - note: By default, Calendars have no locale set. If you wish to receive a localized answer, be sure to set the `locale` property first - most likely to `Locale.autoupdatingCurrent`.
     public var pmSymbol: String {
-        symbol(for: .pmSymbol)
+        let amPMs = symbols(for: .amPMs)
+        return amPMs[1]
     }
 
     // MARK: -
@@ -1728,7 +1664,7 @@ public struct Calendar : Hashable, Equatable, Sendable {
 
         // Apply an epsilon to comparison of nanosecond values
         if let nanosecond = comp.nanosecond, let tempNanosecond = tempComp.nanosecond {
-            if labs(nanosecond - tempNanosecond) > 500 {
+            if labs(CLong(nanosecond - tempNanosecond)) > 500 {
                 return false
             } else {
                 comp.nanosecond = 0

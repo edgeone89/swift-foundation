@@ -14,6 +14,9 @@
 import TestSupport
 #endif
 
+// Predicate does not back-deploy to older Darwin versions
+#if FOUNDATION_FRAMEWORK || os(Linux) || os(Windows)
+
 @available(macOS 9999, iOS 9999, tvOS 9999, watchOS 9999, *)
 final class PredicateTests: XCTestCase {
     
@@ -25,6 +28,7 @@ final class PredicateTests: XCTestCase {
         var e: Character
         var f: Bool
         var g: [Int]
+        var h: Date = .now
     }
     
     struct Object2 {
@@ -49,11 +53,9 @@ final class PredicateTests: XCTestCase {
         try XCTAssertTrue(predicate.evaluate(Object(a: 2, b: "", c: 0, d: 0, e: "c", f: true, g: [])))
     }
     
-    #if false // TODO: Re-enable with Variadic Generics
-    func testVariable() throws {
-        let variable = PredicateExpressions.Variable<Int>()
-        let predicate = Predicate<Object> {
-            // $0.a == variable + 1
+    func testVariadic() throws {
+        let predicate = Predicate<Object, Int> {
+            // $0.a == $1 + 1
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_KeyPath(
@@ -63,16 +65,15 @@ final class PredicateTests: XCTestCase {
                 ),
                 rhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_Arithmetic(
-                        lhs: PredicateExpressions.build_Arg(variable),
+                        lhs: PredicateExpressions.build_Arg($1),
                         rhs: PredicateExpressions.build_Arg(1),
                         op: .add
                     )
                 )
             )
         }
-        XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), bindings: PredicateBindings().binding(variable, to: 2)))
+        XCTAssert(try predicate.evaluate(Object(a: 3, b: "", c: 0, d: 0, e: "c", f: true, g: []), 2))
     }
-    #endif
     
     func testArithmetic() throws {
         let predicate = Predicate<Object> {
@@ -356,7 +357,7 @@ final class PredicateTests: XCTestCase {
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_ForcedUnwrap(
-                        lhs: PredicateExpressions.build_KeyPath(
+                        PredicateExpressions.build_KeyPath(
                             root: $0,
                             keyPath: \.wrapped
                         )
@@ -372,28 +373,37 @@ final class PredicateTests: XCTestCase {
         XCTAssert(try predicate2.evaluate(Wrapper<Int>(wrapped: 19)))
         XCTAssertThrowsError(try predicate2.evaluate(Wrapper<Int>(wrapped: nil)))
         
+        struct _NonCodableType : Equatable {}
+        let predicate3 = Predicate<Wrapper<_NonCodableType>> {
+            // $0.wrapped == nil
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.wrapped
+                ),
+                rhs: PredicateExpressions.build_NilLiteral()
+            )
+        }
+        XCTAssertFalse(try predicate3.evaluate(Wrapper(wrapped: _NonCodableType())))
+        XCTAssertTrue(try predicate3.evaluate(Wrapper(wrapped: nil)))
     }
     
-    #if false // TODO: Re-enable with Variadic Generics
     func testConditional() throws {
-        let v1 = PredicateExpressions.Variable<String>()
-        let v2 = PredicateExpressions.Variable<String>()
-        let predicate = Predicate<Bool> {
-            // ($0 ? v1 : v2) == "if branch"
+        let predicate = Predicate<Bool, String, String> {
+            // ($0 ? $1 : $2) == "if branch"
             PredicateExpressions.build_Equal(
                 lhs: PredicateExpressions.build_Arg(
                     PredicateExpressions.build_Conditional(
                         $0,
-                        PredicateExpressions.build_Arg(v1),
-                        PredicateExpressions.build_Arg(v2)
+                        PredicateExpressions.build_Arg($1),
+                        PredicateExpressions.build_Arg($2)
                     )
                 ),
                 rhs: PredicateExpressions.build_Arg("if branch")
             )
         }
-        XCTAssert(try predicate.evaluate(true, bindings: PredicateBindings().binding(v1, to: "if branch").binding(v2, to: "else branch")))
+        XCTAssert(try predicate.evaluate(true, "if branch", "else branch"))
     }
-    #endif
     
     func testClosedRange() throws {
         let predicate = Predicate<Object> {
@@ -484,6 +494,25 @@ final class PredicateTests: XCTestCase {
         XCTAssert(try predicate2.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
     }
     
+    func testRangeContains() throws {
+        let date = Date.distantPast
+        let predicate = Predicate<Object> {
+            // (date ..< date).contains($0.h)
+            PredicateExpressions.build_contains(
+                PredicateExpressions.build_Range(
+                    lower: PredicateExpressions.build_Arg(date),
+                    upper: PredicateExpressions.build_Arg(date)
+                ),
+                PredicateExpressions.build_KeyPath(
+                    root: PredicateExpressions.build_Arg($0),
+                    keyPath: \.h
+                )
+            )
+        }
+        
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 5, e: "c", f: true, g: [])))
+    }
+    
     func testTypes() throws {
         let predicate = Predicate<Object> {
             // ($0.a as? Int).flatMap { $0 == 3 } ?? false
@@ -566,4 +595,123 @@ final class PredicateTests: XCTestCase {
         XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [0])))
         XCTAssertThrowsError(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [])))
     }
+    
+    func testStaticValues() throws {
+        func assertPredicate<T>(_ pred: Predicate<T>, value: T, expected: Bool) throws {
+            XCTAssertEqual(try pred.evaluate(value), expected)
+        }
+        
+        try assertPredicate(.true, value: "Hello", expected: true)
+        try assertPredicate(.false, value: "Hello", expected: false)
+    }
+    
+    func testMaxMin() throws {
+        var predicate = Predicate<Object> {
+            // $0.g.max() == 2
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_max(
+                    PredicateExpressions.build_KeyPath(
+                        root: $0,
+                        keyPath: \.g
+                    )
+                ),
+                rhs: PredicateExpressions.build_Arg(2)
+            )
+        }
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 2])))
+        
+        predicate = Predicate<Object> {
+            // $0.g.min() == 2
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_min(
+                    PredicateExpressions.build_KeyPath(
+                        root: $0,
+                        keyPath: \.g
+                    )
+                ),
+                rhs: PredicateExpressions.build_Arg(2)
+            )
+        }
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "", c: 0.0, d: 0, e: "c", f: true, g: [2, 3])))
+    }
+    
+    #if FOUNDATION_FRAMEWORK
+    
+    func testCaseInsensitiveCompare() throws {
+        let equal = ComparisonResult.orderedSame
+        let predicate = Predicate<Object> {
+            // $0.b.caseInsensitiveCompare("ABC") == equal
+            PredicateExpressions.build_Equal(
+                lhs: PredicateExpressions.build_caseInsensitiveCompare(
+                    PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.b
+                    ),
+                    PredicateExpressions.build_Arg("ABC")
+                ),
+                rhs: PredicateExpressions.build_Arg(equal)
+            )
+        }
+        XCTAssertTrue(try predicate.evaluate(Object(a: 3, b: "abc", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+        XCTAssertFalse(try predicate.evaluate(Object(a: 3, b: "def", c: 0.0, d: 0, e: "c", f: true, g: [1, 3])))
+    }
+    
+    #endif
+    
+    func testBuildDynamically() throws {
+        func _build(_ equal: Bool) -> Predicate<Int> {
+            Predicate<Int> {
+                if equal {
+                    PredicateExpressions.Equal(
+                        lhs: $0,
+                        rhs: PredicateExpressions.Value(1)
+                    )
+                } else {
+                    PredicateExpressions.NotEqual(
+                        lhs: $0,
+                        rhs: PredicateExpressions.Value(1)
+                    )
+                }
+            }
+        }
+        
+        XCTAssertTrue(try _build(true).evaluate(1))
+        XCTAssertFalse(try _build(false).evaluate(1))
+    }
+    
+    func testResilientKeyPaths() {
+        // Local, non-resilient type
+        struct Foo {
+            let a: String   // Non-resilient
+            let b: Date     // Resilient (in Foundation)
+            let c: String   // Non-resilient
+        }
+        
+        let now = Date.now
+        let _ = Predicate<Foo> {
+            PredicateExpressions.build_Conjunction(
+                lhs: PredicateExpressions.build_Equal(
+                    lhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.a
+                    ),
+                    rhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.c
+                    )
+                ),
+                rhs: PredicateExpressions.build_Equal(
+                    lhs: PredicateExpressions.build_KeyPath(
+                        root: PredicateExpressions.build_Arg($0),
+                        keyPath: \.b
+                    ),
+                    rhs: PredicateExpressions.build_Arg(now)
+                )
+            )
+        }
+    }
 }
+
+#endif

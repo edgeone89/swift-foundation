@@ -1,6 +1,6 @@
 //===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift Collections open source project
+// This source file is part of the Swift.org open source project
 //
 // Copyright (c) 2023 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
@@ -179,5 +179,28 @@ extension BidirectionalCollection where Element == UTF8.CodeUnit {
         }
 
         return _StringBlock(start: start, end: end, contentsEnd: contentsEnd)
+    }
+}
+
+extension Substring.UTF8View {
+    // Note: we could have these defined on BidirectionalCollection<UInt8>, like _getBlock.
+    // However, all current call sites are funneling through Substring.UTF8View, and it makes
+    // sense to avoid dealing with generics unless we're forced to. Feel free to convert these
+    // utilities to generic functions if needed.
+
+    internal func _lineBounds(
+        around range: Range<Index>
+    ) -> (start: Index, end: Index, contentsEnd: Index) {
+        let result = _getBlock(
+            for: [.findStart, .findEnd, .findContentsEnd, .stopAtLineSeparators], in: range)
+        return (result.start!, result.end!, result.contentsEnd!)
+    }
+
+    internal func _paragraphBounds(
+        around range: Range<Index>
+    ) -> (start: Index, end: Index, contentsEnd: Index) {
+        let result = _getBlock(
+            for: [.findStart, .findEnd, .findContentsEnd], in: range)
+        return (result.start!, result.end!, result.contentsEnd!)
     }
 }
