@@ -27,4 +27,4 @@ linker = "aarch64-linux-gnu-gcc"
 target = "x86_64-unknown-linux-gnu"
 #target = ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "aarch64-linux-android", "i686-linux-android", "x86_64-linux-android", "riscv64gc-unknown-linux-gnu"]
 
-target-dir = "./output"
+#target-dir = "./output"

@@ -33,6 +33,8 @@ let package = Package(
         // RustShims (Internal)
         .target(
             name: "RustShims",
+            linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])],
+            //linkerSettings: [LinkerSetting.linkedLibrary("rustshims")],
             plugins: [.plugin(name: "RustShimsSourceGenPlugin")]),
         .plugin(
             name: "RustShimsSourceGenPlugin",
@@ -55,8 +57,8 @@ let package = Package(
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ],
-          linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
+          ]
+          //linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
@@ -73,8 +75,8 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ],
-            linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
+            ]
+            //linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
         ),
     ]
 )

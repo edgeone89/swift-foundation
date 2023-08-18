@@ -10,6 +10,16 @@ edition = "2018"
 name = "rustshims"
 crate-type = ["staticlib"]
 
+[profile.release]
+opt-level = 'z'
+lto = true # enable link time optimization
+panic = "abort" # disable stack unwinding on panic
+strip = true
+
+[profile.dev]
+opt-level = 'z'
+lto = true # enable link time optimization
+panic = "abort" # disable stack unwinding on panic
 
 [dependencies]
 libc = "0.2"

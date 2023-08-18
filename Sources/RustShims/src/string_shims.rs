@@ -1,5 +1,6 @@
-use std::ffi::CString;
-use std::ptr;
+extern crate alloc;
+//use alloc::ffi::CString;
+use core::ptr;
 //use libc;
 
 extern "C" {

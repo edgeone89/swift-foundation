@@ -1,5 +1,6 @@
-use std::convert::TryInto;
-use std::ffi::CString;
+extern crate alloc;
+use core::convert::TryInto;
+//use alloc::ffi::CString;
 //use std::mem;
 use libc::c_uint;
 
@@ -23,11 +24,12 @@ fn nanotime(tv: *mut libc::timespec) {
 
 
 #[cfg(any(target_os = "linux", target_family="unix"))]
-fn read_random(buffer: *mut libc::c_void, numBytes: libc::size_t) {
-    let file_path = CString::new("/dev/urandom").unwrap();
+fn read_random(buffer: *mut libc::c_void, num_bytes: libc::size_t) {
+    //let file_path = CString::new("/dev/urandom").unwrap();
+    let file_path = b"/dev/urandom";
     unsafe {
         let fd = libc::open(file_path.as_ptr() as *const i8, libc::O_RDONLY);
-        libc::read(fd, buffer, numBytes);
+        libc::read(fd, buffer, num_bytes);
         libc::close(fd);
     }
 }

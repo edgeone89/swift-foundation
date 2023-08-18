@@ -18,4 +18,4 @@ rustup target add x86_64-unknown-linux-gnu
 
 cargo -Z unstable-options -C $1 build --release
 
-cp $1/output/x86_64-unknown-linux-gnu/release/*.a $1/librustshims.a
+cp $1/target/x86_64-unknown-linux-gnu/release/*.a $1/
