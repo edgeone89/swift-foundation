@@ -41,7 +41,7 @@ unsafe impl GlobalAlloc for Allocator {
 
 
 #[alloc_error_handler]
-fn my_allocator_error(_layout: Layout) -> ! {
+fn allocator_error(_layout: Layout) -> ! {
     panic!("out of memory");
 }
 
