@@ -1,8 +1,7 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.8
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
-import CompilerPluginSupport
 
 let package = Package(
     name: "FoundationPreview",
@@ -31,17 +30,11 @@ let package = Package(
             ],
             path: "Sources/Foundation"),
 
-        // RustShims (Internal)
-        .target(
-            name: "RustShims",
-            linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])],
-            //linkerSettings: [LinkerSetting.linkedLibrary("rustshims")],
-            plugins: [.plugin(name: "RustShimsSourceGenPlugin")]),
-        .plugin(
-            name: "RustShimsSourceGenPlugin",
-            capability: .buildTool()
-        ),
-        
+        // _CShims (Internal)
+        .target(name: "_CShims",
+                cSettings: [.define("_CRT_SECURE_NO_WARNINGS",
+                                    .when(platforms: [.windows]))]),
+
         // TestSupport (Internal)
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
@@ -52,14 +45,13 @@ let package = Package(
         .target(
           name: "FoundationEssentials",
           dependencies: [
-            "RustShims",
+            "_CShims",
             .product(name: "_RopeModule", package: "swift-collections"),
           ],
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
           ]
-          //linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
         ),
         .testTarget(name: "FoundationEssentialsTests", dependencies: [
             "TestSupport",
@@ -71,13 +63,12 @@ let package = Package(
             name: "FoundationInternationalization",
             dependencies: [
                 .target(name: "FoundationEssentials"),
-                .target(name: "RustShims"),
+                .target(name: "_CShims"),
                 .product(name: "FoundationICU", package: "swift-foundation-icu")
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
             ]
-            //linkerSettings: [LinkerSetting.unsafeFlags(["-L./Sources/RustShims/", "-lpthread", "-ldl"])]
         ),
     ]
 )
@@ -89,40 +80,4 @@ package.targets.append(contentsOf: [
         "FoundationInternationalization"
     ]),
 ])
-#endif
-
-#if !os(Linux) && !os(Windows)
-// FoundationMacros
-package.dependencies.append(
-    .package(
-        url: "https://github.com/apple/swift-syntax.git",
-        from: "509.0.0-swift-5.9-DEVELOPMENT-SNAPSHOT-2023-08-15-a")
-)
-package.targets.append(contentsOf: [
-    .macro(
-        name: "FoundationMacros",
-        dependencies: [
-            .product(name: "SwiftSyntax", package: "swift-syntax"),
-            .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
-            .product(name: "SwiftOperators", package: "swift-syntax"),
-            .product(name: "SwiftParser", package: "swift-syntax"),
-            .product(name: "SwiftParserDiagnostics", package: "swift-syntax"),
-            .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
-        ],
-        swiftSettings: [
-            .enableExperimentalFeature("AccessLevelOnImport")
-        ]
-    ),
-    .testTarget(
-        name: "FoundationMacrosTests",
-        dependencies: [
-            "FoundationMacros",
-            "TestSupport"
-        ]
-    )
-])
-
-if let index = package.targets.firstIndex(where: { $0.name == "FoundationEssentials" }) {
-    package.targets[index].dependencies.append("FoundationMacros")
-}
 #endif
