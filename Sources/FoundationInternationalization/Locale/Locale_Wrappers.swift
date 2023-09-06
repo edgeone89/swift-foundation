@@ -124,7 +124,10 @@ extension NSLocale {
 
     @objc(_localeIdentifierFromWindowsLocaleCode:)
     class func _localeIdentifier(fromWindowsLocaleCode: UInt32) -> String? {
-        Locale.identifier(fromWindowsLocaleCode: Int(fromWindowsLocaleCode))
+        guard let code = Int(exactly: fromWindowsLocaleCode) else {
+            return nil
+        }
+        return Locale.identifier(fromWindowsLocaleCode: code)
     }
 
     @objc(_windowsLocaleCodeFromLocaleIdentifier:)
@@ -481,7 +484,7 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
         }
 
         switch key {
-        case .identifier: return self.localizedString(forLocaleIdentifier: value)
+        case .identifier: return self._nullableLocalizedString(forLocaleIdentifier: value)
         case .languageCode: return self.localizedString(forLanguageCode: value)
         case .countryCode: return self.localizedString(forCountryCode: value)
         case .scriptCode: return self.localizedString(forScriptCode: value)
@@ -601,9 +604,14 @@ internal class _NSSwiftLocale: _NSLocaleBridge {
     }
 
     override func localizedString(forLocaleIdentifier localeIdentifier: String) -> String {
-        locale.localizedString(forIdentifier: localeIdentifier) ?? ""
+        _nullableLocalizedString(forLocaleIdentifier: localeIdentifier) ?? ""
     }
-
+    
+    /// Some CFLocale APIs require the result to remain `nullable`. They can call this directly, where the `localizedString(forLocaleIdentifier:)` entry point can remain (correctly) non-nullable.
+    private func _nullableLocalizedString(forLocaleIdentifier localeIdentifier: String) -> String? {
+        locale.localizedString(forIdentifier: localeIdentifier)
+    }
+    
     override func localizedString(forLanguageCode languageCode: String) -> String? {
         locale.localizedString(forLanguageCode: languageCode)
     }
