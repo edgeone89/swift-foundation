@@ -64,6 +64,7 @@ let package = Package(
           name: "FoundationEssentials",
           dependencies: [
             "RustShims",
+            "FoundationMacros",
             .product(name: "_RopeModule", package: "swift-collections"),
           ],
           swiftSettings: [
@@ -122,11 +123,5 @@ package.targets.append(contentsOf: [
         "FoundationInternationalization"
     ], swiftSettings: availabilityMacros),
 ])
-#endif
 
-#if !os(Windows)
-// Using macros at build-time is not yet supported on Windows
-if let index = package.targets.firstIndex(where: { $0.name == "FoundationEssentials" }) {
-    package.targets[index].dependencies.append("FoundationMacros")
-}
 #endif
