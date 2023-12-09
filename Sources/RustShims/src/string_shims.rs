@@ -10,7 +10,7 @@ extern "C" {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn _cshims_strncasecmp_l(
+pub unsafe extern "C" fn _stringshims_strncasecmp_l(
     s1: *const libc::c_char,
     s2: *const libc::c_char,
     n: libc::size_t,
@@ -30,7 +30,7 @@ pub unsafe extern "C" fn _cshims_strncasecmp_l(
 
 
 #[no_mangle]
-pub unsafe extern "C" fn _cshims_strtod_l(nptr: *const libc::c_char,
+pub unsafe extern "C" fn _stringshims_strtod_l(nptr: *const libc::c_char,
     endptr: *mut *mut libc::c_char,
     loc: libc::locale_t) -> libc::c_double
 {
@@ -49,7 +49,7 @@ pub unsafe extern "C" fn _cshims_strtod_l(nptr: *const libc::c_char,
 
 
 #[no_mangle]
-pub unsafe extern "C" fn _cshims_strtof_l(nptr: *const libc::c_char,
+pub unsafe extern "C" fn _stringshims_strtof_l(nptr: *const libc::c_char,
     endptr: *mut *mut libc::c_char,
     loc: libc::locale_t) -> libc::c_float
 {
@@ -67,7 +67,7 @@ pub unsafe extern "C" fn _cshims_strtof_l(nptr: *const libc::c_char,
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn _cshims_get_formatted_str_length(value: libc::c_double) -> libc::c_int
+pub unsafe extern "C" fn _stringshims_get_formatted_str_length(value: libc::c_double) -> libc::c_int
 {
     let mut empty:[libc::c_char; 1] = [0];
     return libc::snprintf(empty.as_mut_ptr(), 0, b"%0.*g".as_ptr() as *const libc::c_char, 17/*libc::DBL_DECIMAL_DIG*/, value);
