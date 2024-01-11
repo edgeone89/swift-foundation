@@ -9,6 +9,7 @@ use libc::free;
 
 pub mod string_shims;
 pub mod uuid;
+pub mod platform_shims;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right

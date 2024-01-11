@@ -2,3 +2,4 @@
 #include "CFUniCharBitmapData.h"
 #include "string_shims.h"
 #include "uuid.h"
+#include "platform_shims.h"
