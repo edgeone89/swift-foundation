@@ -56,24 +56,24 @@ const SIZE_OF_UUID_T: libc::size_t = 16;//mem::size_of::<[libc::c_uchar; 16]>();
 const SIZE_OF_UUID_STRING_T: libc::size_t = 37;//mem::size_of::<[libc::c_char; 37]>();
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_clear(uu: *mut libc::c_void)
+pub unsafe extern "C" fn _foundation_uuid_clear(uu: *mut libc::c_void)
 {
     libc::memset(uu, 0, SIZE_OF_UUID_T);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_compare(uu1: *mut libc::c_void, uu2: *mut libc::c_void) -> libc::c_int {
+pub unsafe extern "C" fn _foundation_uuid_compare(uu1: *mut libc::c_void, uu2: *mut libc::c_void) -> libc::c_int {
     return libc::memcmp(uu1, uu2, SIZE_OF_UUID_T);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_copy(dst: *mut libc::c_void, src: *const libc::c_void)
+pub unsafe extern "C" fn _foundation_uuid_copy(dst: *mut libc::c_void, src: *const libc::c_void)
 {
     libc::memcpy(dst, src, SIZE_OF_UUID_T);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_generate_random(out: *mut libc::c_int)
+pub unsafe extern "C" fn _foundation_uuid_generate_random(out: *mut libc::c_int)
 {
     read_random(out as *mut libc::c_void, SIZE_OF_UUID_T);
 
@@ -82,7 +82,7 @@ pub unsafe extern "C" fn uuid_generate_random(out: *mut libc::c_int)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_generate_time(out: *mut u8)
+pub unsafe extern "C" fn _foundation_uuid_generate_time(out: *mut u8)
 {
     let mut time: u64 = 0;
 
@@ -104,20 +104,20 @@ pub unsafe extern "C" fn uuid_generate_time(out: *mut u8)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_generate(out: *mut libc::c_int)
+pub unsafe extern "C" fn _foundation_uuid_generate(out: *mut libc::c_int)
 {
-    uuid_generate_random(out);
+    _foundation_uuid_generate_random(out);
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_is_null(uu: *const libc::c_void) -> libc::c_int
+pub unsafe extern "C" fn _foundation_uuid_is_null(uu: *const libc::c_void) -> libc::c_int
 {
     let res = libc::memcmp(uu, UUID_NULL.as_ptr() as *const libc::c_void, SIZE_OF_UUID_T);
     return !res;    
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_parse(in_arg: *const libc::c_char, uu: *mut libc::c_uchar) -> libc::c_int
+pub unsafe extern "C" fn _foundation_uuid_parse(in_arg: *const libc::c_char, uu: *mut libc::c_uchar) -> libc::c_int
 {
     let mut n = 0;
     //let format = CString::new("%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n").unwrap();
@@ -143,7 +143,7 @@ pub unsafe extern "C" fn uuid_parse(in_arg: *const libc::c_char, uu: *mut libc::
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_unparse_lower(uu: *const libc::c_uchar, out_arg: *mut libc::c_char)
+pub unsafe extern "C" fn _foundation_uuid_unparse_lower(uu: *const libc::c_uchar, out_arg: *mut libc::c_char)
 {
     //let format = CString::new("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x").unwrap();
     let format = br"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
@@ -162,7 +162,7 @@ pub unsafe extern "C" fn uuid_unparse_lower(uu: *const libc::c_uchar, out_arg: *
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_unparse_upper(uu: *const libc::c_uchar , out_arg: *mut libc::c_char)
+pub unsafe extern "C" fn _foundation_uuid_unparse_upper(uu: *const libc::c_uchar , out_arg: *mut libc::c_char)
 {
     //let format = CString::new("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x").unwrap();
     let format = br"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
@@ -182,7 +182,7 @@ pub unsafe extern "C" fn uuid_unparse_upper(uu: *const libc::c_uchar , out_arg: 
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn uuid_unparse(uu: *const libc::c_uchar , out_arg: *mut libc::c_char)
+pub unsafe extern "C" fn _foundation_uuid_unparse(uu: *const libc::c_uchar , out_arg: *mut libc::c_char)
 {
-    uuid_unparse_upper(uu, out_arg);
+    _foundation_uuid_unparse_upper(uu, out_arg);
 }
