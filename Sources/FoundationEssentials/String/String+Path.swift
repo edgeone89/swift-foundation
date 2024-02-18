@@ -16,11 +16,11 @@
 @_implementationOnly import _CShims
 #else
 package import os
-package import _CShims
+package import RustShims
 #endif
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
+package import RustShims
 #endif
 
 extension String {

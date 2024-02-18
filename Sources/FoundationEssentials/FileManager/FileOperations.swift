@@ -17,7 +17,7 @@ import Glibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _CShims
+@_implementationOnly import RustShims
 @_implementationOnly import _ForSwiftFoundation
 @_implementationOnly import Foundation_Private.NSFileManager
 
@@ -25,7 +25,7 @@ import Glibc
 @_implementationOnly import QuarantinePrivate
 #endif
 #else
-package import _CShims
+package import RustShims
 #endif
 
 extension CocoaError {

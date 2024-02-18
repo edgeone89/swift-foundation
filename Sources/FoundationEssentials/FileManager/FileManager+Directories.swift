@@ -13,7 +13,7 @@
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import containermanager
 @_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import _CShims
+@_implementationOnly import RustShims
 @_implementationOnly import os
 #endif
 
@@ -21,7 +21,7 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
+package import RustShims
 #endif
 
 #if FOUNDATION_FRAMEWORK

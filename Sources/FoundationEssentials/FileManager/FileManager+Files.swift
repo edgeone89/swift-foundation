@@ -19,7 +19,7 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import _CShims
+package import RustShims
 #endif
 
 extension Date {
