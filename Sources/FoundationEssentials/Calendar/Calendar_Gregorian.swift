@@ -1475,9 +1475,10 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
     // MARK:
 
     func date(from components: DateComponents) -> Date? {
+        // If the components specifies a new time zone, perform this calculation using the specified timezone
         // If the date falls into the skipped time frame when transitioning into DST (e.g. 1:00 - 3:00 AM for PDT), we want to treat it as if DST hasn't happened yet. So, use .former for dstRepeatedTimePolicy.
         // If the date falls into the repeated time frame when DST ends (e.g. 1:00 - 2:00 AM for PDT), we want the first instance, i.e. the instance before turning back the clock. So, use .former for dstSkippedTimePolicy.
-        date(from: components, inTimeZone: timeZone, dstRepeatedTimePolicy: .former, dstSkippedTimePolicy: .former)
+        date(from: components, inTimeZone: components.timeZone ?? timeZone, dstRepeatedTimePolicy: .former, dstSkippedTimePolicy: .former)
     }
 
     //  Returns the weekday with reference to `firstWeekday`, in the range of 0...6
@@ -2557,7 +2558,13 @@ internal final class _CalendarGregorian: _CalendarProtocol, @unchecked Sendable 
             return (goalEra - currEra, start)
         case .nanosecond:
             let diffInNano = end.timeIntervalSince(start).remainder(dividingBy: 1) * 1.0e+9
-            let diff = diffInNano < Double(Int32.max) ? Int(diffInNano) : Int(Int32.max)
+            let diff = if diffInNano >= Double(Int32.max) {
+                Int(Int32.max)
+            } else if diffInNano <= Double(Int32.min) {
+                Int(Int32.min)
+            } else {
+                Int(diffInNano)
+            }
             let advanced = add(component, to: start, amount: diff, inTimeZone: timeZone)
             return (diff, advanced)
 
