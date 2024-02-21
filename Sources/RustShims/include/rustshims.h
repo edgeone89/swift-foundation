@@ -1,3 +1,8 @@
+#include <sys/param.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/xattr.h>
+#include <fts.h>
 #include "CFUniCharBitmapData.inc.h"
 #include "CFUniCharBitmapData.h"
 #include "string_shims.h"

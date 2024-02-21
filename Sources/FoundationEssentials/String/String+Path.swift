@@ -13,7 +13,7 @@
 #if canImport(Darwin)
 #if FOUNDATION_FRAMEWORK
 @_implementationOnly import os
-@_implementationOnly import _CShims
+@_implementationOnly import RustShims
 #else
 package import os
 package import RustShims

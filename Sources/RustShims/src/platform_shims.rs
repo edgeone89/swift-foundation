@@ -3,6 +3,7 @@ extern "C" {
     static kOSThermalNotificationPressureLevelName: *const libc::c_char;
     fn _NSGetEnviron() -> *mut *mut libc::c_char;
 }
+
 #[no_mangle]
 pub unsafe extern "C" fn _platform_shims_get_environ() -> *mut *mut libc::c_char {
     return environ;
@@ -18,4 +19,14 @@ pub unsafe extern "C" fn _platform_shims_get_environ() -> *mut *mut libc::c_char
 #[no_mangle]
 pub unsafe extern "C" fn _platform_shims_kOSThermalNotificationPressureLevelName() -> *const libc::c_char {
     return kOSThermalNotificationPressureLevelName;
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn _platform_shims_lock_environ() {
+
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn _platform_shims_unlock_environ() {
+
 }
