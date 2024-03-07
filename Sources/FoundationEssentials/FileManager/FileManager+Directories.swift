@@ -11,10 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import containermanager
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import RustShims
-@_implementationOnly import os
+internal import containermanager
+internal import _ForSwiftFoundation
+internal import os
 #endif
 
 #if canImport(Darwin)
@@ -23,6 +22,8 @@ import Darwin
 import Glibc
 package import RustShims
 #endif
+
+internal import RustShims
 
 #if FOUNDATION_FRAMEWORK
 var _shouldLog: Bool = {

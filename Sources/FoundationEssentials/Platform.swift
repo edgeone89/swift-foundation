@@ -11,12 +11,7 @@
 
 #if canImport(Darwin)
 import Darwin
-
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import MachO.dyld
-#else
-package import MachO.dyld
-#endif // FOUNDATION_FRAMEWORK
+internal import MachO.dyld
 
 fileprivate var _pageSize: Int {
     Int(vm_page_size)
@@ -39,11 +34,10 @@ fileprivate let _pageSize: Int = Int(getpagesize())
 #endif // canImport(Darwin)
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import RustShims
-@_implementationOnly import CoreFoundation_Private
-#else
-package import RustShims
+internal import CoreFoundation_Private
 #endif
+
+internal import RustShims
 
 package struct Platform {
     static var pageSize: Int {

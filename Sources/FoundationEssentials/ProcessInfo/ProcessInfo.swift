@@ -10,11 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import RustShims
-#else
-package import RustShims
-#endif
+internal import RustShims
 
 #if canImport(Darwin)
 import Darwin

@@ -11,12 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import RustShims
-@_implementationOnly import DarwinPrivate // for VREG
-#else
-package import RustShims
+internal import _ForSwiftFoundation
+internal import DarwinPrivate // for VREG
 #endif
+
+internal import RustShims
 
 #if canImport(Darwin)
 import Darwin

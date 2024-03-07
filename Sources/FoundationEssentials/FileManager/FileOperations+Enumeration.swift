@@ -14,7 +14,7 @@
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import RustShims
+internal import RustShims
 #endif
 
 // MARK: Directory Iteration

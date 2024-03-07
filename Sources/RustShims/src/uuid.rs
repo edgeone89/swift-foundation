@@ -6,14 +6,94 @@ use libc::c_uint;
 
 extern "C" {
     fn mach_absolute_time() -> u64;
+    fn uuid_clear(uu: *mut libc::c_void);
+    fn uuid_compare(uu1: *const libc::c_void, uu2: *const libc::c_void) -> libc::c_int;
+    fn uuid_copy(dst: *mut libc::c_void, src: *const libc::c_void);
+    fn uuid_generate(out: *mut libc::c_void);
+    fn uuid_generate_random(out: *mut libc::c_void);
+    fn uuid_generate_time(out: *mut libc::c_void);
+    fn uuid_is_null(uu: *const libc::c_void) ->  libc::c_int;
+    fn uuid_parse(_in: *const libc::c_void, uu: *mut libc::c_void) -> libc::c_int;
+    fn uuid_unparse(uu: *const libc::c_void, out: *mut libc::c_void);
 }
 
+
 #[cfg(target_os = "macos")]
-fn nanotime(tv: *mut libc::timespec) {
-    let now = mach_absolute_time();
-    *(tv).tv_sec = now / 1000000000;
-    *(tv).tv_nsec = now - (*(tv).tv_sec * 1000000000);
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_clear(uu: *mut libc::c_void) {
+    uuid_clear(uu);
 }
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_compare(uu1: *const libc::c_void, uu2: *const libc::c_void) -> libc::c_int {
+    return uuid_compare(uu1, uu2);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_copy(dst: *mut libc::c_void, src: *const libc::c_void) {
+    uuid_copy(dst, src);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_generate(out: *mut libc::c_void) {
+    uuid_generate(out);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_generate_random(out: *mut libc::c_void) {
+    uuid_generate_random(out);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_generate_time(out: *mut libc::c_void) {
+    uuid_generate_time(out);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_is_null(uu: *const libc::c_void) -> libc::c_int {
+    return uuid_is_null(uu);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_parse(_in: *const libc::c_void, uu: *mut libc::c_void) -> libc::c_int {
+    return uuid_parse(_in, uu);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_unparse(uu: *const libc::c_void, out: *mut libc::c_void) {
+    uuid_unparse(uu, out);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_unparse_lower(uu: *const libc::c_void, out: *mut libc::c_void) {
+    uuid_unparse_lower(uu, out);
+}
+
+
+#[cfg(target_os = "macos")]
+#[no_mangle]
+pub unsafe extern "C" fn _foundation_uuid_unparse_upper(uu: *const libc::c_void, out: *mut libc::c_void) {
+    uuid_unparse_upper(uu, out);
+}
+
 
 #[cfg(any(target_os = "linux", target_family = "unix"))]
 fn nanotime(tv: *mut libc::timespec) {
@@ -50,6 +130,8 @@ fn read_time() -> u64
 
     return ((tv.tv_sec * 10000000) + (tv.tv_nsec / 100) + 0x01B21DD213814000).try_into().unwrap();
 }
+
+
 
 const UUID_NULL: [libc::c_uchar;16] = [0;16];
 const SIZE_OF_UUID_T: libc::size_t = 16;//mem::size_of::<[libc::c_uchar; 16]>();

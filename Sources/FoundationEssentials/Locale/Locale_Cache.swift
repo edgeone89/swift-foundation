@@ -11,14 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import _ForSwiftFoundation
+internal import _ForSwiftFoundation
 import CoreFoundation
-@_implementationOnly import CoreFoundation_Private.CFNotificationCenter
-@_implementationOnly import os
-@_implementationOnly import RustShims
-#else
-package import RustShims
+internal import CoreFoundation_Private.CFNotificationCenter
+internal import os
 #endif
+
+internal import RustShims
 
 /// Singleton which listens for notifications about preference changes for Locale and holds cached singletons.
 struct LocaleCache : Sendable {

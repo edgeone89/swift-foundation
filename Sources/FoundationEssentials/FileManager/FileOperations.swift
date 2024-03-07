@@ -17,16 +17,17 @@ import Glibc
 #endif
 
 #if FOUNDATION_FRAMEWORK
-@_implementationOnly import RustShims
-@_implementationOnly import _ForSwiftFoundation
-@_implementationOnly import Foundation_Private.NSFileManager
+internal import _ForSwiftFoundation
+internal import Foundation_Private.NSFileManager
 
 #if os(macOS)
-@_implementationOnly import QuarantinePrivate
+internal import QuarantinePrivate
 #endif
 #else
 package import RustShims
 #endif
+
+internal import RustShims
 
 extension CocoaError {
     private static func fileOperationError(_ errNum: Int32, _ suspectedErroneousPath: String, sourcePath: String? = nil, destinationPath: String? = nil, variant: String? = nil) -> CocoaError {

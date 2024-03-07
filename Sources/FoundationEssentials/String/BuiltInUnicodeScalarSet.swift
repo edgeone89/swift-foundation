@@ -9,11 +9,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if FOUNDATION_FRAMEWORK
-@_implementationOnly import RustShims
-#else
-package import RustShims
-#endif
+internal import RustShims
 
 // Native implementation of CFCharacterSet.
 // Represents sets of unicode scalars of those whose bitmap data we own.
