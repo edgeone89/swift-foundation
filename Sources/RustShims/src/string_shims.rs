@@ -5,6 +5,7 @@ use core::ptr;
 
 extern "C" {
     fn strncasecmp_l(s1: *const libc::c_char, s2: *const libc::c_char, n: libc::size_t, loc: libc::locale_t) -> libc::c_int;
+    fn strncasecmp(s1: *const libc::c_char, s2: *const libc::c_char, n: libc::size_t) -> libc::c_int;
     fn strtof(s: *const libc::c_char, endp: *mut *mut libc::c_char, loc: libc::locale_t) -> libc::c_float;
     fn strtod_l(nptr: *const libc::c_char, endptr: *mut *mut libc::c_char, loc: libc::locale_t) -> libc::c_double;
 }
@@ -16,16 +17,17 @@ pub unsafe extern "C" fn _stringshims_strncasecmp_l(
     n: libc::size_t,
     loc: libc::locale_t,
 ) -> libc::c_int {
-    if loc != ptr::null_mut() {
+    /*if loc != ptr::null_mut() {
         return strncasecmp_l(s1, s2, n, loc);
-    }
+    }*/
 
     #[cfg(target_os = "macos")]
     return strncasecmp_l(s1, s2, n, ptr::null());
 
     //let locale = CString::new("C").unwrap();
-    let clocale = libc::newlocale(libc::LC_ALL_MASK, b"C".as_ptr() as *const libc::c_char, 0 as libc::locale_t); // 12 == 'C'
-    return strncasecmp_l(s1, s2, n, clocale);
+    /*let clocale = libc::newlocale(libc::LC_ALL_MASK, b"C".as_ptr() as *const libc::c_char, 0 as libc::locale_t); // 12 == 'C'
+    return strncasecmp_l(s1, s2, n, clocale);*/
+    return strncasecmp(s1, s2, n);
 }
 
 

@@ -8,3 +8,4 @@
 #include "string_shims.h"
 #include "uuid.h"
 #include "platform_shims.h"
+#include "bplist_shims.h"

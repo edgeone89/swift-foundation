@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-internal import _CShims
+internal import RustShims
 
 private let plistBytes : StaticString = "plist"
 private let arrayBytes : StaticString = "array"
