@@ -28,10 +28,6 @@ import TestSupport
 @testable import Foundation
 #endif
 
-#if !FOUNDATION_FRAMEWORK
-import RustShims
-#endif
-
 // MARK: - Test Suite
 
 final class JSONEncoderTests : XCTestCase {
@@ -2394,7 +2390,7 @@ extension JSONEncoderTests {
         case .json5:
             XCTAssertNoThrow(try json5.decode(type, from: jsonData))
 
-            // Regular JSON decoder should throw.
+            // Regular JSON decoder should throw.
             do {
                 let val = try json.decode(type, from: jsonData)
                 XCTFail("Expected decode failure (original JSON)for test \(name).\(ext), but got: \(val)")
@@ -2406,7 +2402,7 @@ extension JSONEncoderTests {
                 XCTFail("Expected decode failure (JSON5) for test \(name).\(ext), but got: \(val)")
             } catch { }
 
-            // Regular JSON decoder should also throw.
+            // Regular JSON decoder should also throw.
             do {
                 let val = try json.decode(type, from: jsonData)
                 XCTFail("Expected decode failure (original JSON) for test \(name).\(ext), but got: \(val)")
@@ -2418,7 +2414,7 @@ extension JSONEncoderTests {
                 XCTFail("Expected decode failure (JSON5) for test \(name).\(ext), but got: \(val)")
             } catch { }
 
-            // Regular JSON decoder should also throw.
+            // Regular JSON decoder should also throw.
             do {
                 let val = try json.decode(type, from: jsonData)
                 XCTFail("Expected decode failure (original JSON) for test \(name).\(ext), but got: \(val)")

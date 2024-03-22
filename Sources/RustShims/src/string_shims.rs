@@ -68,9 +68,3 @@ pub unsafe extern "C" fn _stringshims_strtof_l(nptr: *const libc::c_char,
     return result;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn _stringshims_get_formatted_str_length(value: libc::c_double) -> libc::c_int
-{
-    let mut empty:[libc::c_char; 1] = [0];
-    return libc::snprintf(empty.as_mut_ptr(), 0, b"%0.*g".as_ptr() as *const libc::c_char, 17/*libc::DBL_DECIMAL_DIG*/, value);
-}
