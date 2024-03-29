@@ -106,9 +106,9 @@ fn nanotime(tv: *mut libc::timespec) {
 #[cfg(any(target_os = "linux", target_family="unix"))]
 fn read_random(buffer: *mut libc::c_void, num_bytes: libc::size_t) {
     //let file_path = CString::new("/dev/urandom").unwrap();
-    let file_path = b"/dev/urandom";
+    let file_path = c"/dev/urandom";
     unsafe {
-        let fd = libc::open(file_path.as_ptr() as *const i8, libc::O_RDONLY);
+        let fd = libc::open(file_path.as_ptr(), libc::O_RDONLY);
         libc::read(fd, buffer, num_bytes);
         libc::close(fd);
     }
@@ -203,10 +203,10 @@ pub unsafe extern "C" fn _foundation_uuid_parse(in_arg: *const libc::c_char, uu:
 {
     let mut n = 0;
     //let format = CString::new("%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n").unwrap();
-    let format = br"%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n";
+    let format = cr"%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n";
 
     libc::sscanf(in_arg,
-        format.as_ptr() as *const i8,
+        format.as_ptr(),
         uu.offset(0), uu.offset(1),
         uu.offset(2), uu.offset(3),
         uu.offset(4), uu.offset(5),
@@ -228,11 +228,11 @@ pub unsafe extern "C" fn _foundation_uuid_parse(in_arg: *const libc::c_char, uu:
 pub unsafe extern "C" fn _foundation_uuid_unparse_lower(uu: *const libc::c_uchar, out_arg: *mut libc::c_char)
 {
     //let format = CString::new("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x").unwrap();
-    let format = br"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
+    let format = cr"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
 
     libc::snprintf(out_arg,
         SIZE_OF_UUID_STRING_T,
-        format.as_ptr() as *const i8,
+        format.as_ptr(),
         *uu.offset(0) as c_uint, *uu.offset(1) as c_uint,
         *uu.offset(2) as c_uint, *uu.offset(3) as c_uint,
         *uu.offset(4) as c_uint, *uu.offset(5) as c_uint,
@@ -247,11 +247,11 @@ pub unsafe extern "C" fn _foundation_uuid_unparse_lower(uu: *const libc::c_uchar
 pub unsafe extern "C" fn _foundation_uuid_unparse_upper(uu: *const libc::c_uchar , out_arg: *mut libc::c_char)
 {
     //let format = CString::new("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x").unwrap();
-    let format = br"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
+    let format = cr"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
 
     let res = libc::snprintf(out_arg,
         SIZE_OF_UUID_STRING_T,
-        format.as_ptr() as *const i8,
+        format.as_ptr(),
         *uu.offset(0) as c_uint, *uu.offset(1) as c_uint,
         *uu.offset(2) as c_uint, *uu.offset(3) as c_uint,
         *uu.offset(4) as c_uint, *uu.offset(5) as c_uint,

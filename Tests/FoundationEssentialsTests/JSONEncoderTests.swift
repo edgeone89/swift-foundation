@@ -1719,7 +1719,7 @@ final class JSONEncoderTests : XCTestCase {
             "+0x ",
             "-0xAFFFFFAFFFFFAFFFFFAFFFFFAFFFFFAFFFFFAFFFFFAFFFFF",
             "0xABC.DEF",
-            //"0xABCpD",
+            "0xABCpD",
             "1e",
             "1E",
             "1e ",

@@ -22,7 +22,7 @@ import ucrt
 import WinSDK
 #endif
 
-internal import _CShims
+internal import RustShims
 
 #if FOUNDATION_FRAMEWORK
 internal import _ForSwiftFoundation
