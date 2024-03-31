@@ -20,7 +20,9 @@ internal import os
 import Darwin
 #elseif canImport(Glibc)
 import Glibc
-package import RustShims
+#elseif os(Windows)
+import CRT
+import WinSDK
 #endif
 
 internal import RustShims

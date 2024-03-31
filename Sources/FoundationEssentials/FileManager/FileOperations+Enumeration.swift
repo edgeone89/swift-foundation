@@ -15,6 +15,8 @@ import Darwin
 #elseif canImport(Glibc)
 import Glibc
 internal import RustShims
+#elseif os(Windows)
+import CRT
 #endif
 
 // MARK: Directory Iteration
