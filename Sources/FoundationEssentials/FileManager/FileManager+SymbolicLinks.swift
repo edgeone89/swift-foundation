@@ -43,7 +43,7 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, destURL)
         }
 
-        try createSymbolicLink(atPath: path, withDestinationPath: destPath)
+        try fileManager.createSymbolicLink(atPath: path, withDestinationPath: destPath)
     }
     
     func createSymbolicLink(
@@ -56,7 +56,7 @@ extension _FileManagerImpl {
 
         try path.withNTPathRepresentation { lpSymlinkFileName in
             try destPath.withNTPathRepresentation { lpTargetFileName in
-                if CreateSymbolicLinkW(lpSymlinkFileName, lpTargetFileName, bIsDirectory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0) == 0 {
+                if CreateSymbolicLinkW(lpSymlinkFileName, lpTargetFileName, SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE | (bIsDirectory ? SYMBOLIC_LINK_FLAG_DIRECTORY : 0)) == 0 {
                     throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: false)
                 }
             }
@@ -101,7 +101,7 @@ extension _FileManagerImpl {
             throw CocoaError.errorWithFilePath(.fileNoSuchFile, dstURL)
         }
         
-        try linkItem(atPath: srcPath, toPath: dstPath)
+        try fileManager.linkItem(atPath: srcPath, toPath: dstPath)
     }
     
     func linkItem(
