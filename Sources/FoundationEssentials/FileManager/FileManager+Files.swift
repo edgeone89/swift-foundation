@@ -106,6 +106,18 @@ func _readFileAttributePrimitive(_ value: Any?, as type: Bool.Type) -> Bool? {
     return nil
 }
 
+#if !FOUNDATION_FRAMEWORK
+@_spi(SwiftCorelibsFoundation)
+public protocol _NSNumberInitializer {
+    static func initialize(value: Bool) -> Any
+    static func initialize(value: some BinaryInteger) -> Any
+}
+
+private let _nsNumberInitializer: (any _NSNumberInitializer.Type)? = {
+    _typeByName("Foundation._FoundationNSNumberInitializer") as? any _NSNumberInitializer.Type
+}()
+#endif
+
 func _writeFileAttributePrimitive<T: BinaryInteger, U: BinaryInteger>(_ value: T, as type: U.Type) -> Any {
     #if FOUNDATION_FRAMEWORK
     if let int = Int64(exactly: value) {
@@ -114,7 +126,11 @@ func _writeFileAttributePrimitive<T: BinaryInteger, U: BinaryInteger>(_ value: T
         NSNumber(value: UInt64(value))
     }
     #else
-    U(value)
+    if let ns = _nsNumberInitializer?.initialize(value: value) {
+        return ns
+    } else {
+        return U(value)
+    }
     #endif
 }
 
@@ -122,7 +138,11 @@ func _writeFileAttributePrimitive(_ value: Bool) -> Any {
     #if FOUNDATION_FRAMEWORK
     NSNumber(value: value)
     #else
-    value
+    if let ns = _nsNumberInitializer?.initialize(value: value) {
+        return ns
+    } else {
+        return value
+    }
     #endif
 }
 
@@ -531,6 +551,24 @@ extension _FileManagerImpl {
                 throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
             }
 
+            let hFile = CreateFileW(pwszPath, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nil, OPEN_EXISTING, 0, nil)
+            if hFile == INVALID_HANDLE_VALUE {
+                throw CocoaError.errorWithFilePath(path, win32: GetLastError(), reading: true)
+            }
+            defer { CloseHandle(hFile) }
+
+            let dwFileType = GetFileType(hFile)
+            let fatType: FileAttributeType = switch (dwFileType) {
+                case FILE_TYPE_CHAR: FileAttributeType.typeCharacterSpecial
+                case FILE_TYPE_DISK:
+                    faAttributes.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY == FILE_ATTRIBUTE_DIRECTORY
+                            ? FileAttributeType.typeDirectory
+                            : FileAttributeType.typeRegular
+                case FILE_TYPE_PIPE: FileAttributeType.typeSocket
+                case FILE_TYPE_UNKNOWN: FileAttributeType.typeUnknown
+                default: FileAttributeType.typeUnknown
+            }
+
             let size: UInt64 = (UInt64(faAttributes.nFileSizeHigh) << 32) | UInt64(faAttributes.nFileSizeLow)
             let creation: Date = Date(timeIntervalSince1970: faAttributes.ftCreationTime.timeIntervalSince1970)
             let modification: Date = Date(timeIntervalSince1970: faAttributes.ftLastWriteTime.timeIntervalSince1970)
@@ -538,13 +576,13 @@ extension _FileManagerImpl {
                 .size: _writeFileAttributePrimitive(size, as: UInt.self),
                 .modificationDate: modification,
                 .creationDate: creation,
+                .type: fatType,
 
                 // TODO(compnerd) support these attributes, remapping the Windows semantics...
                 // .posixPermissions: ...,
                 // .referenceCount: ...,
                 // .systemNumber: ...,
                 // .systemFileNumber: ...,
-                // .type: ...,
                 // .ownerAccountID: ...,
                 // .groupownerAccountID: ...,
                 // .ownerAccountName: ...,
