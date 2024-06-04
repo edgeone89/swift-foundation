@@ -118,7 +118,7 @@ let package = Package(
             dependencies: [
                 .target(name: "FoundationEssentials"),
                 .target(name: "RustShims"),
-                .product(name: "FoundationICU", package: "swift-foundation-icu")
+                .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")

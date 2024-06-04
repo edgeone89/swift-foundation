@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "working dir:"
+echo "from RustShims: working dir:"
 pwd
 
 echo "cpu arch:"
