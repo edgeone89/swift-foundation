@@ -28,12 +28,23 @@ extension IntegerParseStrategy : Sendable where Format : Sendable {}
 @available(macOS 12.0, iOS 15.0, tvOS 15.0, watchOS 8.0, *)
 extension IntegerParseStrategy: ParseStrategy {
     public func parse(_ value: String) throws -> Format.FormatInput {
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            throw CocoaError(CocoaError.formatting, userInfo: [
+                NSDebugDescriptionErrorKey: "Cannot parse \(value). Could not create parser." ])
+        }
         let trimmedString = value._trimmingWhitespace()
         if let v = parser.parseAsInt(trimmedString) {
-            return Format.FormatInput(v)
+            guard let exact = Format.FormatInput(exactly: v) else {
+                throw CocoaError(CocoaError.formatting, userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type" ])
+            }
+            return exact
         } else if let v = parser.parseAsDouble(trimmedString) {
-            return Format.FormatInput(clamping: Int64(v))
+            guard let exact = Format.FormatInput(exactly: v) else {
+                throw CocoaError(CocoaError.formatting, userInfo: [
+                    NSDebugDescriptionErrorKey: "Cannot parse \(value). The number does not fall within the valid bounds of the specified output type" ])
+            }
+            return exact
         } else {
             let exampleString = formatStyle.format(123)
             throw CocoaError(CocoaError.formatting, userInfo: [
@@ -46,7 +57,9 @@ extension IntegerParseStrategy: ParseStrategy {
             return nil
         }
 
-        let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient)
+        guard let parser = ICULegacyNumberFormatter.formatter(for: numberFormatType, locale: locale, lenient: lenient) else {
+            return nil
+        }
         let substr = value[index..<range.upperBound]
         var upperBound = 0
         if let value = parser.parseAsInt(substr, upperBound: &upperBound) {

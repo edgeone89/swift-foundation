@@ -105,7 +105,6 @@ fn nanotime(tv: *mut libc::timespec) {
 
 #[cfg(any(target_os = "linux", target_family="unix"))]
 fn read_random(buffer: *mut libc::c_void, num_bytes: libc::size_t) {
-    //let file_path = CString::new("/dev/urandom").unwrap();
     let file_path = c"/dev/urandom";
     unsafe {
         let fd = libc::open(file_path.as_ptr(), libc::O_RDONLY);
@@ -155,7 +154,7 @@ pub unsafe extern "C" fn _foundation_uuid_copy(dst: *mut libc::c_void, src: *con
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn _foundation_uuid_generate_random(out: *mut libc::c_int)
+pub unsafe extern "C" fn _foundation_uuid_generate_random(out: *mut libc::c_uchar)
 {
     read_random(out as *mut libc::c_void, SIZE_OF_UUID_T);
 
@@ -186,7 +185,7 @@ pub unsafe extern "C" fn _foundation_uuid_generate_time(out: *mut u8)
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn _foundation_uuid_generate(out: *mut libc::c_int)
+pub unsafe extern "C" fn _foundation_uuid_generate(out: *mut libc::c_uchar)
 {
     _foundation_uuid_generate_random(out);
 }
@@ -202,7 +201,6 @@ pub unsafe extern "C" fn _foundation_uuid_is_null(uu: *const libc::c_void) -> li
 pub unsafe extern "C" fn _foundation_uuid_parse(in_arg: *const libc::c_char, uu: *mut libc::c_uchar) -> libc::c_int
 {
     let mut n = 0;
-    //let format = CString::new("%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n").unwrap();
     let format = cr"%2hhx%2hhx%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx%n";
 
     libc::sscanf(in_arg,
@@ -227,7 +225,6 @@ pub unsafe extern "C" fn _foundation_uuid_parse(in_arg: *const libc::c_char, uu:
 #[no_mangle]
 pub unsafe extern "C" fn _foundation_uuid_unparse_lower(uu: *const libc::c_uchar, out_arg: *mut libc::c_char)
 {
-    //let format = CString::new("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x").unwrap();
     let format = cr"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
 
     libc::snprintf(out_arg,
@@ -246,7 +243,6 @@ pub unsafe extern "C" fn _foundation_uuid_unparse_lower(uu: *const libc::c_uchar
 #[no_mangle]
 pub unsafe extern "C" fn _foundation_uuid_unparse_upper(uu: *const libc::c_uchar , out_arg: *mut libc::c_char)
 {
-    //let format = CString::new("%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x").unwrap();
     let format = cr"%02X%02X%02X%02X-%02X%02X-%02X%02X-%02X%02X-%02X%02X%02X%02X%02X%02X";
 
     let res = libc::snprintf(out_arg,

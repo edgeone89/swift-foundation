@@ -36,6 +36,11 @@ let availabilityMacros: [SwiftSetting] = versionNumbers.flatMap { version in
     }
 }
 
+let concurrencyChecking: [SwiftSetting] = [
+    .enableExperimentalFeature("StrictConcurrency"),
+    .enableUpcomingFeature("InferSendableFromCaptures")
+]
+
 let package = Package(
     name: "FoundationPreview",
     platforms: [.macOS("13.3"), .iOS("16.4"), .tvOS("16.4"), .watchOS("9.4")],
@@ -81,7 +86,7 @@ let package = Package(
         .target(name: "TestSupport", dependencies: [
             "FoundationEssentials",
             "FoundationInternationalization",
-        ], swiftSettings: availabilityMacros),
+        ], swiftSettings: availabilityMacros + concurrencyChecking),
 
         // FoundationEssentials
         .target(
@@ -98,7 +103,7 @@ let package = Package(
           swiftSettings: [
             .enableExperimentalFeature("VariadicGenerics"),
             .enableExperimentalFeature("AccessLevelOnImport")
-          ] + availabilityMacros
+          ] + availabilityMacros + concurrencyChecking
         ),
         .testTarget(
             name: "FoundationEssentialsTests",
@@ -109,7 +114,7 @@ let package = Package(
             resources: [
                 .copy("Resources")
             ],
-            swiftSettings: availabilityMacros
+            swiftSettings: availabilityMacros + concurrencyChecking
         ),
 
         // FoundationInternationalization
@@ -122,7 +127,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros
+            ] + availabilityMacros + concurrencyChecking
         ),
         
         // FoundationMacros
@@ -138,7 +143,7 @@ let package = Package(
             ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
-            ] + availabilityMacros
+            ] + availabilityMacros + concurrencyChecking
         ),
     ]
 )
@@ -153,7 +158,7 @@ package.targets.append(contentsOf: [
             "FoundationMacros",
             "TestSupport"
         ],
-        swiftSettings: availabilityMacros
+        swiftSettings: availabilityMacros + concurrencyChecking
     )
 ])
 #endif
@@ -163,6 +168,6 @@ package.targets.append(contentsOf: [
     .testTarget(name: "FoundationInternationalizationTests", dependencies: [
         "TestSupport",
         "FoundationInternationalization",
-    ], swiftSettings: availabilityMacros),
+    ], swiftSettings: availabilityMacros + concurrencyChecking),
 ])
 #endif

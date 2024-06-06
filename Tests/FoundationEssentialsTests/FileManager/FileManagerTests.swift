@@ -29,7 +29,7 @@ extension FileManager {
     }
 }
 
-private struct DelegateCaptures : Equatable {
+private struct DelegateCaptures : Equatable, Sendable {
     struct Operation : Equatable, CustomStringConvertible {
         let src: String
         let dst: String?
@@ -80,8 +80,9 @@ private struct DelegateCaptures : Equatable {
 }
 
 #if FOUNDATION_FRAMEWORK
-class CapturingFileManagerDelegate : NSObject, FileManagerDelegate {
-    fileprivate var captures = DelegateCaptures()
+class CapturingFileManagerDelegate : NSObject, FileManagerDelegate, @unchecked Sendable {
+    // Sendable note: This is only used on one thread during testing
+    fileprivate nonisolated(unsafe) var captures = DelegateCaptures()
     
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldCopy.append(.init(srcPath, dstPath))
@@ -124,8 +125,9 @@ class CapturingFileManagerDelegate : NSObject, FileManagerDelegate {
     }
 }
 #else
-class CapturingFileManagerDelegate : FileManagerDelegate {
-    fileprivate var captures = DelegateCaptures()
+final class CapturingFileManagerDelegate : FileManagerDelegate, Sendable {
+    // Sendable note: This is only used on one thread during testing
+    fileprivate nonisolated(unsafe) var captures = DelegateCaptures()
     
     func fileManager(_ fileManager: FileManager, shouldCopyItemAtPath srcPath: String, toPath dstPath: String) -> Bool {
         captures.shouldCopy.append(.init(srcPath, dstPath))
@@ -424,8 +426,8 @@ final class FileManagerTests : XCTestCase {
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["dir", "dir/foo", "other"])
             XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar")])
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [])
-            
-            let rootDir = $0.currentDirectoryPath
+
+            let rootDir = URL(fileURLWithPath: $0.currentDirectoryPath).path
             try $0.removeItem(atPath: "dir")
             XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), ["other"])
             XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo")])
@@ -439,6 +441,22 @@ final class FileManagerTests : XCTestCase {
             try $0.removeItem(atPath: "does_not_exist")
             XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("dir/bar"), .init("\(rootDir)/dir"), .init("\(rootDir)/dir/foo"), .init("other"), .init("does_not_exist")])
             XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [.init("does_not_exist", code: .fileNoSuchFile)])
+        }
+
+        try FileManagerPlayground {
+            Directory("dir") {
+                Directory("dir2") {
+                    "file"
+                }
+            }
+        }.test(captureDelegateCalls: true) {
+            let rootDir = URL(fileURLWithPath: $0.currentDirectoryPath).path
+
+            XCTAssertTrue($0.delegateCaptures.isEmpty)
+            try $0.removeItem(atPath: "dir")
+            XCTAssertEqual(try $0.subpathsOfDirectory(atPath: ".").sorted(), [])
+            XCTAssertEqual($0.delegateCaptures.shouldRemove, [.init("\(rootDir)/dir"), .init("\(rootDir)/dir/dir2"), .init("\(rootDir)/dir/dir2/file")])
+            XCTAssertEqual($0.delegateCaptures.shouldProceedAfterRemoveError, [])
         }
 
         #if canImport(Darwin)
@@ -673,7 +691,7 @@ final class FileManagerTests : XCTestCase {
             try $0.createSymbolicLink(atPath: "link", withDestinationPath: "destination")
             let absolutePath = $0.currentDirectoryPath.appendingPathComponent("link")
             let resolved = absolutePath._resolvingSymlinksInPath() // Call internal function to avoid path standardization
-            XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination"))
+            XCTAssertEqual(resolved, $0.currentDirectoryPath.appendingPathComponent("destination").withFileSystemRepresentation { String(cString: $0!) })
         }
     }
     
@@ -688,7 +706,7 @@ final class FileManagerTests : XCTestCase {
     #endif
     
     func testSearchPaths() throws {
-        func assertSearchPaths(_ directories: [FileManager.SearchPathDirectory], exists: Bool, file: StaticString = #file, line: UInt = #line) {
+        func assertSearchPaths(_ directories: [FileManager.SearchPathDirectory], exists: Bool, file: StaticString = #filePath, line: UInt = #line) {
             for directory in directories {
                 let paths = FileManager.default.urls(for: directory, in: .allDomainsMask)
                 XCTAssertEqual(!paths.isEmpty, exists, "Directory \(directory) produced an unexpected number of paths (expected to exist: \(exists), produced: \(paths))", file: file, line: line)
@@ -784,7 +802,7 @@ final class FileManagerTests : XCTestCase {
             }
             #endif
             
-            func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #file, line: UInt = #line) {
+            func validate(_ key: String, suffix: String? = nil, directory: FileManager.SearchPathDirectory, domain: FileManager.SearchPathDomainMask, file: StaticString = #filePath, line: UInt = #line) {
                 let oldValue = ProcessInfo.processInfo.environment[key] ?? ""
                 var knownPath = fileManager.currentDirectoryPath.appendingPathComponent("TestPath")
                 setenv(key, knownPath, 1)

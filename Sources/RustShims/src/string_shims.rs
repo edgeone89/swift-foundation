@@ -1,5 +1,5 @@
 extern crate alloc;
-//use alloc::ffi::CString;
+use alloc::ffi::CString;
 use core::ptr;
 //use libc;
 
@@ -24,9 +24,9 @@ pub unsafe extern "C" fn _stringshims_strncasecmp_l(
     #[cfg(target_os = "macos")]
     return strncasecmp_l(s1, s2, n, ptr::null());
 
-    /*let clocale = libc::newlocale(libc::LC_ALL_MASK, c"C".as_ptr(), loc); // 12 == 'C'
-    return strncasecmp_l(s1, s2, n, clocale);*/
-    return strncasecmp(s1, s2, n);
+    let clocale = libc::newlocale(libc::LC_ALL_MASK, c"C".as_ptr(), 0 as libc::locale_t); // 12 == 'C'
+    return strncasecmp_l(s1, s2, n, clocale);
+    //return strncasecmp(s1, s2, n);
 }
 
 
