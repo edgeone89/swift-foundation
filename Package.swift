@@ -56,10 +56,10 @@ let package = Package(
             from: "1.1.0"),
         .package(
             url: "https://github.com/apple/swift-foundation-icu",
-            exact: "0.0.7"),
+            exact: "0.0.8"),
         .package(
             url: "https://github.com/apple/swift-syntax.git",
-            from: "510.0.0")
+            from: "600.0.0-latest")
     ],
     targets: [
         // Foundation (umbrella)
@@ -97,6 +97,24 @@ let package = Package(
             .product(name: "_RopeModule", package: "swift-collections"),
             .product(name: "OrderedCollections", package: "swift-collections"),
           ],
+          exclude: [
+            "Formatting/CMakeLists.txt",
+            "PropertyList/CMakeLists.txt",
+            "Decimal/CMakeLists.txt",
+            "String/CMakeLists.txt",
+            "Error/CMakeLists.txt",
+            "Locale/CMakeLists.txt",
+            "Data/CMakeLists.txt",
+            "TimeZone/CMakeLists.txt",
+            "JSON/CMakeLists.txt",
+            "AttributedString/CMakeLists.txt",
+            "Calendar/CMakeLists.txt",
+            "Predicate/CMakeLists.txt",
+            "CMakeLists.txt",
+            "ProcessInfo/CMakeLists.txt",
+            "FileManager/CMakeLists.txt",
+            "URL/CMakeLists.txt"
+          ],
           cSettings: [
             .define("_GNU_SOURCE", .when(platforms: [.linux]))
           ],
@@ -125,6 +143,16 @@ let package = Package(
                 .target(name: "RustShims"),
                 .product(name: "_FoundationICU", package: "swift-foundation-icu")
             ],
+            exclude: [
+                "String/CMakeLists.txt",
+                "TimeZone/CMakeLists.txt",
+                "ICU/CMakeLists.txt",
+                "Formatting/CMakeLists.txt",
+                "Locale/CMakeLists.txt",
+                "Calendar/CMakeLists.txt",
+                "CMakeLists.txt",
+                "Predicate/CMakeLists.txt"
+            ],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
             ] + availabilityMacros + concurrencyChecking
@@ -141,6 +169,7 @@ let package = Package(
                 .product(name: "SwiftParserDiagnostics", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
             ],
+            exclude: ["CMakeLists.txt"],
             swiftSettings: [
                 .enableExperimentalFeature("AccessLevelOnImport")
             ] + availabilityMacros + concurrencyChecking
