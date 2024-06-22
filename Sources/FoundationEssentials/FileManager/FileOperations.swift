@@ -26,8 +26,6 @@ internal import Foundation_Private.NSFileManager
 #if os(macOS)
 internal import QuarantinePrivate
 #endif
-#else
-package import RustShims
 #endif
 
 internal import RustShims

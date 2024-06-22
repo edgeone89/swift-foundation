@@ -836,7 +836,7 @@ struct _BPlistEncodingFormat : PlistEncodingFormat {
             return data
         }
         
-        // The goal of this function is to assign pre-order reference indexes to each object. We have to do this pass before actually writing out all the values because directories and arrays contents are encoded with the indexes of objects that are persisted *after* them (unless they were uniqued previously).
+        // The goal of this function is to assign pre-order reference indexes to each object. We have to do this pass before actually writing out all the values because directories and arrays contents are encoded with the indexes of objects that are persisted *after* them (unless they were uniqued previously).
         private mutating func flattenPlist(_ ref: Reference, _ objectCount: inout Int) {
             switch ref.backing {
             case .array(let array):
