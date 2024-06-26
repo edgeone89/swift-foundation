@@ -8,6 +8,7 @@ extern "C" {
     fn strncasecmp(s1: *const libc::c_char, s2: *const libc::c_char, n: libc::size_t) -> libc::c_int;
     fn strtof(s: *const libc::c_char, endp: *mut *mut libc::c_char, loc: libc::locale_t) -> libc::c_float;
     fn strtod_l(nptr: *const libc::c_char, endptr: *mut *mut libc::c_char, loc: libc::locale_t) -> libc::c_double;
+    fn abort();
 }
 
 #[no_mangle]
@@ -18,8 +19,14 @@ pub unsafe extern "C" fn _stringshims_strncasecmp_l(
     loc: libc::locale_t,
 ) -> libc::c_int {
     if loc != ptr::null_mut() {
+        #[cfg(target_os = "android")]
+        abort();
+        
         return strncasecmp_l(s1, s2, n, loc);
     }
+
+    #[cfg(target_os = "android")]
+    return strncasecmp(s1, s2, n);
 
     #[cfg(target_os = "macos")]
     return strncasecmp_l(s1, s2, n, ptr::null());
