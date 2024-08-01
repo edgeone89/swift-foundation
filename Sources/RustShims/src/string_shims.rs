@@ -72,9 +72,12 @@ pub unsafe extern "C" fn _stringshims_strtof_l(nptr: *const libc::c_char,
     return result;
 }
 
+
+const _STRINGSHIMS_MACROMAN_MAP_SIZE: usize = 129;
+
 #[no_mangle]
 #[allow(non_upper_case_globals)]
-pub static _stringshims_macroman_mapping: [[u8; 3]; 129] = [
+pub static _stringshims_macroman_mapping: [[u8; 3]; _STRINGSHIMS_MACROMAN_MAP_SIZE] = [
     [ 0xC2, 0xA0, 0x00 ], /* NO-BREAK SPACE */
     [ 0xC2, 0xA1, 0x00 ], /* INVERTED EXCLAMATION MARK */
     [ 0xC2, 0xA2, 0x00 ], /* CENT SIGN */
