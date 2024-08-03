@@ -21,6 +21,8 @@ import Glibc
 import CRT
 import WinSDK
 internal import RustShims
+#elseif os(WASI)
+import WASILibc
 #endif
 
 extension _FileManagerImpl {
