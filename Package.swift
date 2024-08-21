@@ -175,6 +175,15 @@ let package = Package(
             ] + availabilityMacros + concurrencyChecking
         ),
         
+        .testTarget(
+            name: "FoundationInternationalizationTests",
+            dependencies: [
+                "TestSupport",
+                "FoundationInternationalization",
+            ],
+            swiftSettings: availabilityMacros + concurrencyChecking
+        ),
+        
         // FoundationMacros
         .macro(
             name: "FoundationMacros",
@@ -206,14 +215,5 @@ package.targets.append(contentsOf: [
         ],
         swiftSettings: availabilityMacros + concurrencyChecking
     )
-])
-#endif
-
-#if canImport(RegexBuilder)
-package.targets.append(contentsOf: [
-    .testTarget(name: "FoundationInternationalizationTests", dependencies: [
-        "TestSupport",
-        "FoundationInternationalization",
-    ], swiftSettings: availabilityMacros + concurrencyChecking),
 ])
 #endif
