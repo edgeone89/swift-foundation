@@ -37,14 +37,6 @@ internal import QuarantinePrivate
 internal import RustShims
 
 extension CocoaError {
-    fileprivate static func fileOperationError(_ code: CocoaError.Code,  _ sourcePath: String, _ destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
-        var info: [String : AnyHashable] = [NSSourceFilePathErrorKey:sourcePath]
-        if let destinationPath {
-            info[NSDestinationFilePathErrorKey] = destinationPath
-        }
-        return CocoaError.errorWithFilePath(code, sourcePath, variant: variant, userInfo: info)
-    }
-
 #if os(Windows)
     private static func fileOperationError(_ dwError: DWORD, _ suspectedErroneousPath: String, sourcePath: String? = nil, destinationPath: String? = nil, variant: String? = nil) -> CocoaError {
         var path = suspectedErroneousPath
@@ -57,23 +49,16 @@ extension CocoaError {
             }
             path = lastLength > MAX_PATH || fullLength > MAX_PATH ? destinationPath : sourcePath
         }
-
-        var info: [String : AnyHashable] = [:]
-        if let sourcePath {
-            info[NSSourceFilePathErrorKey] = sourcePath
-        }
-        if let destinationPath {
-            info[NSDestinationFilePathErrorKey] = destinationPath
-        }
-        return CocoaError.errorWithFilePath(path, win32: dwError, reading: false, variant: variant, userInfo: info)
+        
+        return CocoaError.errorWithFilePath(path, win32: dwError, reading: false, variant: variant, source: sourcePath, destination: destinationPath)
     }
 
     fileprivate static func removeFileError(_ dwError: DWORD, _ path: String) -> CocoaError {
-        var err = CocoaError.fileOperationError(dwError, path, variant: "Remove")
         if dwError == ERROR_DIR_NOT_EMPTY {
-            err = CocoaError(.fileWriteNoPermission, userInfo: err.userInfo)
+            CocoaError.fileOperationError(ERROR_ACCESS_DENIED, path, variant: "Remove")
+        } else {
+            CocoaError.fileOperationError(dwError, path, variant: "Remove")
         }
-        return err
     }
 
     fileprivate static func moveFileError(_ error: DWORD, _ src: URL, _ dst: URL) -> CocoaError {
@@ -107,22 +92,15 @@ extension CocoaError {
             }
         }
         
-        var userInfo: [String : AnyHashable] = [:]
-        if let sourcePath {
-            userInfo[NSSourceFilePathErrorKey] = sourcePath
-        }
-        if let destinationPath {
-            userInfo[NSDestinationFilePathErrorKey] = destinationPath
-        }
-        return CocoaError.errorWithFilePath(erroneousPath, errno: errNum, reading: false, variant: variant, additionalUserInfo: userInfo)
+        return CocoaError.errorWithFilePath(erroneousPath, errno: errNum, reading: false, variant: variant, source: sourcePath, destination: destinationPath)
     }
     
     fileprivate static func removeFileError(_ errNum: Int32, _ path: String) -> CocoaError {
-        var err = CocoaError.fileOperationError(errNum, path, variant: "Remove")
         if errNum == ENOTEMPTY {
-            err = CocoaError(.fileWriteNoPermission, userInfo: err.userInfo)
+            CocoaError.fileOperationError(EPERM, path, variant: "Remove")
+        } else {
+            CocoaError.fileOperationError(errNum, path, variant: "Remove")
         }
-        return err
     }
     
     fileprivate static func moveFileError(_ errNum: Int32, _ src: URL, _ dst: URL) -> CocoaError {
@@ -811,7 +789,7 @@ enum _FileOperations {
         try src.withNTPathRepresentation { pwszSource in
             var faAttributes: WIN32_FILE_ATTRIBUTE_DATA = .init()
             guard GetFileAttributesExW(pwszSource, GetFileExInfoStandard, &faAttributes) else {
-                throw CocoaError.fileOperationError(.fileReadNoSuchFile, src, dst, variant: bCopyFile ? "Copy" : "Link")
+                throw CocoaError.errorWithFilePath(.fileReadNoSuchFile, src, variant: bCopyFile ? "Copy" : "Link", source: src, destination: dst)
             }
 
             guard delegate.shouldPerformOnItemAtPath(src, to: dst) else { return }
@@ -942,10 +920,11 @@ enum _FileOperations {
             try delegate.throwIfNecessary(errno, src, dst)
             return
         }
+        let copyFile = delegate.copyData
         guard !stat.isDirectory else {
             // wasi-libc does not support FTS for now, so we don't support copying/linking
             // directories on WASI for now.
-            let error = CocoaError.fileOperationError(.featureUnsupported, src, dst)
+            let error = CocoaError.errorWithFilePath(.featureUnsupported, src, variant: copyFile ? "Copy" : "Link", source: src, destination: dst)
             try delegate.throwIfNecessary(error, src, dst)
             return
         }
@@ -965,7 +944,7 @@ enum _FileOperations {
                 try delegate.throwIfNecessary(errno, src, dst)
             }
         } else {
-            if delegate.copyData {
+            if copyFile {
                 try _copyRegularFile(srcPtr, dstPtr, delegate: delegate)
             } else {
                 if link(srcPtr, dstPtr) != 0 {
