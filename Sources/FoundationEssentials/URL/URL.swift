@@ -1236,6 +1236,16 @@ public struct URL: Equatable, Sendable, Hashable {
             return nil
         }
 
+        #if FOUNDATION_FRAMEWORK
+        // Linked-on-or-after check for apps which expect .host() to return nil
+        // for URLs like "https:///". The new .host() implementation returns
+        // an empty string because according to RFC 3986, a host always exists
+        // if there is an authority component, it just might be empty.
+        if Self.compatibility2 && encodedHost.isEmpty {
+            return nil
+        }
+        #endif
+
         func requestedHost() -> String? {
             let didPercentEncodeHost = hasAuthority ? _parseInfo.didPercentEncodeHost : _baseParseInfo?.didPercentEncodeHost ?? false
             if percentEncoded {
@@ -2227,6 +2237,17 @@ extension URL {
         var filePath = path.replacing(._backslash, with: ._slash)
         #else
         var filePath = path
+        #endif
+
+        #if FOUNDATION_FRAMEWORK
+        // Linked-on-or-after check for apps which incorrectly pass a full
+        // "file:" URL string. In the old implementation, this could work
+        // rarely if the app immediately called .appendingPathComponent(_:),
+        // which used to accidentally interpret a relative string starting
+        // with "file:" as an absolute file URL string.
+        if Self.compatibility3 && filePath.starts(with: "file:") {
+            filePath = String(filePath.dropFirst(5))
+        }
         #endif
 
         let isAbsolute = URL.isAbsolute(standardizing: &filePath)
