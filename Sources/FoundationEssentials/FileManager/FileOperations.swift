@@ -940,10 +940,17 @@ enum _FileOperations {
         }
         #else
         while current < total {
+            #if os(FreeBSD)
+            guard copy_file_range(srcfd, &current, dstfd, nil, total - Int(current), 0) != -1 else {
+                try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
+                return
+            }
+            #else
             guard sendfile(dstfd, srcfd, &current, Swift.min(total - Int(current), chunkSize)) != -1 else {
                 try delegate.throwIfNecessary(errno, String(cString: srcPtr), String(cString: dstPtr))
                 return
             }
+            #endif
         }
         #endif
     }
@@ -951,7 +958,7 @@ enum _FileOperations {
     
     #if !canImport(Darwin)
     private static func _copyDirectoryMetadata(srcFD: CInt, srcPath: @autoclosure () -> String, dstFD: CInt, dstPath: @autoclosure () -> String, delegate: some LinkOrCopyDelegate) throws {
-        #if !os(WASI)
+        #if !os(WASI) && !os(Android)
         // Copy extended attributes
         var size = flistxattr(srcFD, nil, 0)
         if size > 0 {

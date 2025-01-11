@@ -31,6 +31,8 @@ package struct LockedState<State> {
     private struct _Lock {
 #if canImport(os)
         typealias Primitive = os_unfair_lock
+#elseif os(FreeBSD)
+        typealias Primitive = pthread_mutex_t?
 #elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
         typealias Primitive = pthread_mutex_t
 #elseif canImport(WinSDK)
@@ -46,17 +48,19 @@ package struct LockedState<State> {
         fileprivate static func initialize(_ platformLock: PlatformLock) {
 #if canImport(os)
             platformLock.initialize(to: os_unfair_lock())
-#elseif canImport(Bionic) || canImport(Glibc)
+#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_mutex_init(platformLock, nil)
 #elseif canImport(WinSDK)
             InitializeSRWLock(platformLock)
 #elseif os(WASI)
             // no-op
+#else
+#error("LockedState._Lock.initialize is unimplemented on this platform")
 #endif
         }
 
         fileprivate static func deinitialize(_ platformLock: PlatformLock) {
-#if canImport(Bionic) || canImport(Glibc)
+#if canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_mutex_destroy(platformLock)
 #endif
             platformLock.deinitialize(count: 1)
@@ -65,24 +69,28 @@ package struct LockedState<State> {
         static fileprivate func lock(_ platformLock: PlatformLock) {
 #if canImport(os)
             os_unfair_lock_lock(platformLock)
-#elseif canImport(Bionic) || canImport(Glibc)
+#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_mutex_lock(platformLock)
 #elseif canImport(WinSDK)
             AcquireSRWLockExclusive(platformLock)
 #elseif os(WASI)
             // no-op
+#else
+#error("LockedState._Lock.lock is unimplemented on this platform")
 #endif
         }
 
         static fileprivate func unlock(_ platformLock: PlatformLock) {
 #if canImport(os)
             os_unfair_lock_unlock(platformLock)
-#elseif canImport(Bionic) || canImport(Glibc)
+#elseif canImport(Bionic) || canImport(Glibc) || canImport(Musl)
             pthread_mutex_unlock(platformLock)
 #elseif canImport(WinSDK)
             ReleaseSRWLockExclusive(platformLock)
 #elseif os(WASI)
             // no-op
+#else
+#error("LockedState._Lock.unlock is unimplemented on this platform")
 #endif
         }
     }
