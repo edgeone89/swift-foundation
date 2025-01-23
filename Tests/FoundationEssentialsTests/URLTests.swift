@@ -946,6 +946,21 @@ final class URLTests : XCTestCase {
         XCTAssertEqual(schemeOnly.absoluteString, "scheme:foo")
     }
 
+    func testURLEmptySchemeCompatibility() throws {
+        var url = try XCTUnwrap(URL(string: ":memory:"))
+        XCTAssertEqual(url.scheme, "")
+
+        let base = try XCTUnwrap(URL(string: "://home"))
+        XCTAssertEqual(base.host(), "home")
+
+        url = try XCTUnwrap(URL(string: "/path", relativeTo: base))
+        XCTAssertEqual(url.scheme, "")
+        XCTAssertEqual(url.host(), "home")
+        XCTAssertEqual(url.path, "/path")
+        XCTAssertEqual(url.absoluteString, "://home/path")
+        XCTAssertEqual(url.absoluteURL.scheme, "")
+    }
+
     func testURLComponentsPercentEncodedUnencodedProperties() throws {
         var comp = URLComponents()
 
@@ -1327,6 +1342,19 @@ final class URLTests : XCTestCase {
         comp = try XCTUnwrap(URLComponents(string: legalURLString))
         XCTAssertEqual(comp.string, legalURLString)
         XCTAssertEqual(comp.percentEncodedPath, colonFirstPath)
+
+        // Colons should be percent-encoded by URLComponents.string if
+        // they could be misinterpreted as a scheme separator.
+
+        comp = URLComponents()
+        comp.percentEncodedPath = "not%20a%20scheme:"
+        XCTAssertEqual(comp.string, "not%20a%20scheme%3A")
+
+        // These would fail if we did not percent-encode the colon.
+        // .string should always produce a valid URL string, or nil.
+
+        XCTAssertNotNil(URL(string: comp.string!))
+        XCTAssertNotNil(URLComponents(string: comp.string!))
     }
 
     func testURLComponentsInvalidPaths() {

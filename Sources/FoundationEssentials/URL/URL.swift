@@ -1123,7 +1123,9 @@ public struct URL: Equatable, Sendable, Hashable {
         }
 
         if let baseScheme = _baseParseInfo.scheme {
-            result.scheme = String(baseScheme)
+            // Scheme might be empty, which URL allows for compatibility,
+            // but URLComponents does not, so we force it internally.
+            result.forceScheme(String(baseScheme))
         }
 
         if hasAuthority {
@@ -1498,7 +1500,7 @@ public struct URL: Equatable, Sendable, Hashable {
         }
         #endif
         if _baseParseInfo != nil {
-            return absoluteURL.path(percentEncoded: percentEncoded)
+            return absoluteURL.relativePath(percentEncoded: percentEncoded)
         }
         if percentEncoded {
             return String(_parseInfo.path)
@@ -2114,7 +2116,7 @@ public struct URL: Equatable, Sendable, Hashable {
             return
         }
         #endif
-        if let parseInfo = URL.parse(urlString: _url.relativeString) {
+        if let parseInfo = RFC3986Parser.parse(urlString: _url.relativeString, encodingInvalidCharacters: true, compatibility: [.allowEmptyScheme, .allowAnyPort]) {
             _parseInfo = parseInfo
         } else {
             // Go to compatibility jail (allow `URL` as a dummy string container for `NSURL` instead of crashing)

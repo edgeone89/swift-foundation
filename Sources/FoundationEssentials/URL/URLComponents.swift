@@ -142,10 +142,12 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return nil
         }
 
-        mutating func setScheme(_ newValue: String?) throws {
+        mutating func setScheme(_ newValue: String?, force: Bool = false) throws {
             reset(.scheme)
-            guard Parser.validate(newValue, component: .scheme) else {
-                throw InvalidComponentError.scheme
+            if !force {
+                guard Parser.validate(newValue, component: .scheme) else {
+                    throw InvalidComponentError.scheme
+                }
             }
             _scheme = newValue
             if encodedHost != nil {
@@ -364,6 +366,17 @@ public struct URLComponents: Hashable, Equatable, Sendable {
             return ""
         }
 
+        private var percentEncodedPathNoColon: String {
+            guard percentEncodedPath.utf8.first(where: { $0 == ._colon || $0 == ._slash }) == ._colon else {
+                return percentEncodedPath
+            }
+            let colonEncodedPath = Array(percentEncodedPath.utf8).replacing(
+                [._colon],
+                with: [UInt8(ascii: "%"), UInt8(ascii: "3"), UInt8(ascii: "A")]
+            )
+            return String(decoding: colonEncodedPath, as: UTF8.self)
+        }
+
         mutating func setPercentEncodedPath(_ newValue: String) throws {
             reset(.path)
             guard Parser.validate(newValue, component: .path) else {
@@ -451,7 +464,13 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 // The parser already validated a special-case (e.g. addressbook:).
                 result += ":\(portString)"
             }
-            result += percentEncodedPath
+            if result.isEmpty {
+                // We must percent-encode colons in the first path segment
+                // as they could be misinterpreted as a scheme separator.
+                result += percentEncodedPathNoColon
+            } else {
+                result += percentEncodedPath
+            }
             if let percentEncodedQuery {
                 result += "?\(percentEncodedQuery)"
             }
@@ -714,6 +733,11 @@ public struct URLComponents: Hashable, Equatable, Sendable {
                 fatalError("Attempting to set scheme with invalid characters")
             }
         }
+    }
+
+    /// Used by `URL` to allow empty scheme for compatibility.
+    internal mutating func forceScheme(_ scheme: String) {
+        try? components.setScheme(scheme, force: true)
     }
 
 #if FOUNDATION_FRAMEWORK
